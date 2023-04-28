@@ -67,4 +67,5 @@ def find_specific_date_data(start_date, end_date, json_dict):
 
 
 def cleanup_temp():
+    """removes the entire temp_data tree."""
     shutil.rmtree('temp_data')
