@@ -13,10 +13,8 @@ os.makedirs('temp_data', exist_ok=True)
 PAPERS_DUMP = "https://production-media.paperswithcode.com/about/papers-with-abstracts.json.gz"  #This URL is static and updated daily per https://github.com/paperswithcode/paperswithcode-data
 
 
-
-
 def fetch_data():
-    """_summary_
+    """Function will download and extract the json data from papers with code
 
     Returns:
         list: List of dictionaries of the loaded data.
@@ -38,3 +36,5 @@ def fetch_data():
         json_data = json.load(f)
     
     return json_data
+
+
