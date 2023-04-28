@@ -9,7 +9,7 @@ import pandas as pd
 
 # Surpisingly it's faster and easier to download dump than query an API for the most current data.
 # Go figure... Please fix this paperswithcode...
-os.makedirs('temp_data', exist_ok=True)
+os.makedirs('temp_data', exist_ok=True)  # Generate a temp_data repository
 PAPERS_DUMP = "https://production-media.paperswithcode.com/about/papers-with-abstracts.json.gz"  #This URL is static and updated daily per https://github.com/paperswithcode/paperswithcode-data
 
 
@@ -64,3 +64,7 @@ def find_specific_date_data(start_date, end_date, json_dict):
         df = df.loc[(df['published'] >= start_date) & (df['published'] <= end_date)]
 
     return df
+
+
+def cleanup_temp():
+    shutil.rmtree('temp_data')
