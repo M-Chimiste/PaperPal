@@ -50,6 +50,8 @@ def find_specific_date_data(start_date, end_date, json_dict):
     Returns:
         df: Pandas Dataframe of the associated data.
     """
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
     
     if start_date == end_date:
         one_day = True
@@ -57,13 +59,19 @@ def find_specific_date_data(start_date, end_date, json_dict):
         one_day = False
     
     df = pd.DataFrame.from_dict(json_dict)
+    df['date'] = pd.to_datetime(df['date'])
 
     if one_day:
-        df = df.loc[df['published'] == start_date ]
+        df = df.loc[df['date'] == start_date ]
     else:
-        df = df.loc[(df['published'] >= start_date) & (df['published'] <= end_date)]
+        df = df.loc[(df['date'] >= start_date) & (df['date'] <= end_date)]
 
     return df
+
+
+def cleanup_temp():
+    """removes the entire temp_data tree."""
+    shutil.rmtree('temp_data')
 
 
 def cleanup_temp():
