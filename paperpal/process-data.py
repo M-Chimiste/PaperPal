@@ -38,3 +38,29 @@ def fetch_data():
     return json_data
 
 
+def find_specific_date_data(start_date, end_date, json_dict):
+    """function to get specific data from the json data by a date range.
+    Dates can be either a range or the same.
+
+    Args:
+        start_date (datetime): The desired start date.
+        end_date (datetime): The desired end date.  Can be the same as start date.
+        json_dict (list): List of dictionaries from the loaded papers with code data
+
+    Returns:
+        df: Pandas Dataframe of the associated data.
+    """
+    
+    if start_date == end_date:
+        one_day = True
+    else:
+        one_day = False
+    
+    df = pd.DataFrame.from_dict(json_dict)
+
+    if one_day:
+        df = df.loc[df['published'] == start_date ]
+    else:
+        df = df.loc[(df['published'] >= start_date) & (df['published'] <= end_date)]
+
+    return df
