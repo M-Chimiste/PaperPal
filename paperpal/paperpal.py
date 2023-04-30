@@ -175,7 +175,7 @@ if __name__ == "__main__":
                                num_beams=args.num_beams,
                                max_tokens=args.max_generated_tokens)
         model_ouputs.append(model_output)
-        recommendation = attempt_to_get_recommendation(recommendation)
+        recommendation = attempt_to_get_recommendation(model_output)
         recommendations.append(recommendation)
 
     if verbose:
