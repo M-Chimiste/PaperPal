@@ -1,10 +1,9 @@
 import sqlite3
-import datetime
 import pandas as pd
 import os
 
 class DatabaseUtils:
-    def __init__(self, mkdirs=True):
+    def __init__(self, mkdirs=True, db_filename=None):
         if mkdirs:
                os.makedirs('database', exist_ok=True)  # Let's store our outputs here
         self.TABLE_NAME = 'papers_data'
@@ -24,11 +23,14 @@ class DatabaseUtils:
                 'recommended': 'TEXT',
                 'why_recommended': 'TEXT'}
 
-
-        self.DATABASE_FILENAME = 'database/paperpal_sqlite.db'
+        if not db_filename:
+            self.db_filename = 'database/paperpal_sqlite.db'
+        else:
+             self.db_filename = db_filename
         self.CREATE_TABLE_QUERY = "CREATE TABLE IF NOT EXISTS {table} ({fields})"
 
         self.INSERT_QUERY = "INSERT INTO {table} ({columns}) VALUES ({values})"
+        self.conn = self.create_connection()
 
 
     def create_connection(self, db_filename=None):
@@ -42,7 +44,7 @@ class DatabaseUtils:
             sqlite connection: connection object for the sqlite database.
         """
         if not db_filename:
-            db_filename = self.DATABASE_FILENAME
+            db_filename = self.db_filename
         try:
             conn = sqlite3.connect(db_filename)
             return conn
@@ -101,5 +103,10 @@ class DatabaseUtils:
         cursor.executemany(insert_statement, values)
 
         conn.commit()
+
+    
+    def close_connection(self):
+        """Method to close the database connection when finished."""
+        self.conn.close()
 
 
