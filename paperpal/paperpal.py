@@ -133,7 +133,7 @@ if __name__ == "__main__":
     if verbose:
         print("Downloading Paperswithcode Data")
     data = ProcessData(args.start_date, args.end_date)
-    data_df = ProcessData.download_and_process_data()
+    data_df = data.download_and_process_data()
     abstracts = list(data_df["abstract"])
     
     if verbose:
