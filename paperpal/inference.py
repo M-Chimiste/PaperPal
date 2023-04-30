@@ -187,7 +187,7 @@ class Inference:
         return research_prompt
     
 
-    def generate(self, text, temp=1, top_k=40, top_p=0.75, num_beams=4, max_tokens=512 **kwargs):
+    def generate(self, text, temp=1, top_k=40, top_p=0.75, num_beams=4, max_tokens=512, **kwargs):
         """Method to generate LLM inference
 
         Args:
