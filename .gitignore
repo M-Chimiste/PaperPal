@@ -85,8 +85,10 @@ ipython_config.py
 # Not today Satan
 config/creds.json
 
-# Model directory
+# project directories
 models/
+temp_data/
+database/
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is
