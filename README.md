@@ -10,7 +10,6 @@ Please note that this repository is currently a work in progress.
 - Automated emails sent after completion (presently only planning integration with gmail).
 
 ## ToDo
-- Generate a requirements file.
 - Write some basic documentation.
 
 ## Completed
@@ -19,3 +18,4 @@ Please note that this repository is currently a work in progress.
 - Code to send emails using Gmail.
 - Generate prompt templates and serving code for Vicuna or other LLMs.
 - Write script to run entire pipeline end-to-end.
+- Generate a requirements file.
