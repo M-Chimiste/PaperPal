@@ -10,6 +10,7 @@ Please note that this repository is currently a work in progress.
 - Automated emails sent after completion (presently only planning integration with gmail).
 
 ## ToDo
+- Generate a requirements file.
 - Generate prompt templates and serving code for Vicuna or other LLMs.
 - Write script to run entire pipeline end-to-end.
 - Write some basic documentation.
