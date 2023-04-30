@@ -1,7 +1,7 @@
 # PaperPal
 Tool for helping me sort papers off my own research interests.
 
-Please note that this repository is very much a work in progress.
+Please note that this repository is currently a work in progress.
 
 ## Key Features
 - Vicuna 13B model integration for summarization and recommendation.
