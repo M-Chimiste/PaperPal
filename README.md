@@ -11,11 +11,11 @@ Please note that this repository is currently a work in progress.
 
 ## ToDo
 - Generate a requirements file.
-- Generate prompt templates and serving code for Vicuna or other LLMs.
-- Write script to run entire pipeline end-to-end.
 - Write some basic documentation.
 
 ## Completed
 - Code to download papers with code data and process them.
 - Code to generate a database and code to insert data into it.
 - Code to send emails using Gmail.
+- Generate prompt templates and serving code for Vicuna or other LLMs.
+- Write script to run entire pipeline end-to-end.
