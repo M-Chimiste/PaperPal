@@ -21,7 +21,7 @@ class DatabaseUtils:
                 'methods': 'TEXT',
                 'summary': 'TEXT',
                 'recommended': 'TEXT',
-                'why_recommended': 'TEXT'}
+                'recommended_text': 'TEXT'}
 
         if not db_filename:
             self.db_filename = 'database/paperpal_sqlite.db'
