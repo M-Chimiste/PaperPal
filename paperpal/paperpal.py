@@ -42,8 +42,8 @@ def get_desired_content(data_df, recommended):
     recommendation_text = list(data_df["recommended"])
     urls = list(data_df["url_pdf"])
     content = [f"The following papers have a recommendation of: {recommended}\n"]
-    for title, summary, recommendation, url in zip(titles, summaries, recommendation_text, urls):
-        line = f"{title} | {url} \n -------------- \n {summary}\n"
+    for title, summary, url in zip(titles, summaries, urls):
+        line = f"\n --------------\n{title} | {url}\n{summary}\n --------------\n"
         content += line
     content = ''.join(content)
     return content
