@@ -27,8 +27,8 @@ Before we get started it's important to note a few things about my current set u
 - Running the script is pretty easy.  In the project directory you can run ```python paperpal/paperpal.py --start_date "2023-04-24"``` and that should launch the program and have it pull data from that date.  You will want to make sure you look at all the arguments to ensure you like the default arguments or pass / change the arguments for your own purpose.
 
 ## ToDo
-- Configuration file for passing arguments versus just argparse (allow option to do either)
-- Dump Data into a Database / Opensearch for follow on analysis
+- Configuration file for passing arguments versus just argparse (allow option to do either).
+- Dump data into a database / Opensearch for follow on analysis.
 
 ## Completed
 - Code to download papers with code data and process them.
