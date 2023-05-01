@@ -106,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_generated_tokens", type=int, default=512)
     parser.add_argument("--sender_address", default=None)
     parser.add_argument("--receiver_address", default=None)
-    parser.add_argument("--cvs", type=bool, default=True)
+    parser.add_argument("--csv", type=bool, default=True)
 
     args = parser.parse_args()
     verbose = args.verbose
