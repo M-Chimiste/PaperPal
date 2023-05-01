@@ -27,23 +27,6 @@ def get_research_interests(filename):
     return interests
 
 
-def create_connection(db_filename):
-        """Function to initialize the connection to the db.  Note that this will create a file
-        if one does not already exist
-
-        Args:
-            db_filename (str): Path of the database file.
-
-        Returns:
-            sqlite connection: connection object for the sqlite database.
-        """
-        try:
-            conn = sqlite3.connect(db_filename)
-            return conn
-        except Exception as e:
-            print(e)
-
-
 def attempt_to_get_recommendation(text):
     """Function to quickly get a recommendation.  I tried to prompt the LLM to give me yes/no.
     TODO - Potentially replace this as a classifier
@@ -76,11 +59,11 @@ def get_desired_content(data_df, recommended):
     """
     summaries = list(data_df["summary"])
     titles = list(data_df["title"])
-    recommendation_text = list(data_df["recommended_text"])
+    recommendation_text = list(data_df["recommended"])
     urls = list(data_df["url_pdf"])
     content = [f"The following papers have a recommendation of: {recommended}"]
     for title, summary, recommendation, url in zip(titles, summaries, recommendation_text, urls):
-        line = f"{title}: {summary} | {recommendation} | {url}"
+        line = f"{title} | {recommendation} | {url} /n -------------- /n {summary}"
         content += line
     content = '/n'.join(content)
     return content
@@ -123,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_generated_tokens", type=int, default=512)
     parser.add_argument("--sender_address", default=None)
     parser.add_argument("--receiver_address", default=None)
+    parser.add_argument("--cvs", type=bool, default=True)
 
     args = parser.parse_args()
     verbose = args.verbose
@@ -142,7 +126,6 @@ if __name__ == "__main__":
     if verbose:
         print("Generating connection to sqlite3")
     
-    db_connection = create_connection(args.db_location)
     
     if verbose:
         print("Beginning model load")
@@ -159,33 +142,44 @@ if __name__ == "__main__":
     research_interests = get_research_interests(args.research)
 
     for abstract in tqdm(abstracts, disable=not verbose):
-        summary_prompt = llm.construct_summary_prompt
-        summary = llm.generate(text=summary_prompt,
-                               temp=args.temp,
-                               top_k=args.top_k,
-                               top_p=args.top_p,
-                               num_beams=args.num_beams,
-                               max_tokens=args.max_generated_tokens)
-        summaries.append(summary)
-        model_ouput_prompt = llm.construct_research_prompt(summary, research_interests)
+        
+        model_ouput_prompt = llm.construct_research_prompt(abstract, research_interests)
         model_output = llm.generate(text=model_ouput_prompt,
                                temp=args.temp,
                                top_k=args.top_k,
                                top_p=args.top_p,
                                num_beams=args.num_beams,
                                max_tokens=args.max_generated_tokens)
+        try:
+            output_dict = eval(model_output)  #should be a dict of related: bool, reasoning ; str
+            recommendation = output_dict['related']
+            
+            if recommendation == True:
+                recommendation = 'yes'
+            else:
+                recommendation = 'no'
+
+            summary = output_dict['reasoning']
+        except Exception:
+            recommendation = 'UNK'
+            summary = "UNK"
         model_ouputs.append(model_output)
-        recommendation = attempt_to_get_recommendation(model_output)
         recommendations.append(recommendation)
+        summaries.append(summary)
 
     if verbose:
         print("Creating merged df")
 
-    data_df["summary"] = summaries
-    data_df["recommended_text"] = model_ouputs
     data_df["recommended"] = recommendations
-
-    data_df.to_sql('papers', con=db_connection, if_exists='append')  # send data to sqlite3
+    data_df["summary"] = summaries
+    data_df["model_output"] = model_ouputs
+    
+    if args.csv:
+        os.makedirs("csv_output", exist_ok=True)
+        today = datetime.date.today()
+        today_string = today.strftime('%Y-%m-%d')
+        csv_output = f"{today_string}-paperpal-output.csv"
+        data_df.to_csv(csv_output)
 
     recommended = data_df.loc[data_df['recommended'] == "yes"]
     not_recommended = data_df.loc[data_df['recommended'] == "no"]
