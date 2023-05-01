@@ -23,7 +23,7 @@ def get_research_interests(filename):
     """
     with open(filename, 'r') as f:
         interests = f.readlines()
-    interests = '/n'.join(interests)
+    interests = '\n'.join(interests)
     return interests
 
 
@@ -63,9 +63,9 @@ def get_desired_content(data_df, recommended):
     urls = list(data_df["url_pdf"])
     content = [f"The following papers have a recommendation of: {recommended}"]
     for title, summary, recommendation, url in zip(titles, summaries, recommendation_text, urls):
-        line = f"{title} | {recommendation} | {url} /n -------------- /n {summary}"
+        line = f"{title} | {recommendation} | {url} \n -------------- \n {summary}"
         content += line
-    content = '/n'.join(content)
+    content = '\n'.join(content)
     return content
 
 
@@ -141,12 +141,15 @@ if __name__ == "__main__":
     for abstract in tqdm(abstracts, disable=not verbose):
         
         model_ouput_prompt = llm.construct_research_prompt(abstract, research_interests)
+        print(model_ouput_prompt)
         model_output = llm.generate(text=model_ouput_prompt,
                                temp=args.temp,
                                top_k=args.top_k,
                                top_p=args.top_p,
                                num_beams=args.num_beams,
                                max_tokens=args.max_generated_tokens)
+        
+        print(model_output)
         try:
             output_dict = eval(model_output)  #should be a dict of related: bool, reasoning ; str
             recommendation = output_dict['related']
@@ -175,7 +178,7 @@ if __name__ == "__main__":
         os.makedirs("csv_output", exist_ok=True)
         today = datetime.date.today()
         today_string = today.strftime('%Y-%m-%d')
-        csv_output = f"{today_string}-paperpal-output.csv"
+        csv_output = f"csv_output/{today_string}-paperpal-output.csv"
         data_df.to_csv(csv_output)
 
     recommended = data_df.loc[data_df['recommended'] == "yes"]

@@ -21,7 +21,7 @@ class GmailCommunication:
                  raise Exception(f"Unable to read credentials path with error: {str(e)}")
 
         if not self.app_password:
-            self.app_password = os.getenv['app_password']
+            self.app_password = os.getenv('app_password')
             if not self.app_password:
                 if not creds_path:
                     raise Exception("No application password found.  Please pass an application password or check your json for an app_password key.")
@@ -30,7 +30,7 @@ class GmailCommunication:
                     raise Exception("No application password found.  Please pass an application password or check your json for an app_password key.")
                 
         if not self.sender_address:
-            self.sender_address = os.getenv['sender_address']
+            self.sender_address = os.getenv('sender_address')
             if not self.sender_address:
                 if not creds_path:
                     raise Exception("No sender address found.  Please pass a sender address or check your json for sender_address key.")
