@@ -179,9 +179,10 @@ class Inference:
         research_prompt = f"""I have the following research interests:
         {research_interests}
 
-        Based on the content below does this paper directly relate to any of my research interests yes or no?
+        Based on the content below delimited by <> does this paper directly relate to any of my research interests?
+        Respond in a json with the keys related (bool) and reasoning (str).
 
-        {text}
+        <{text}>
         """
         research_prompt = self.construct_prompt(research_prompt)
         return research_prompt
