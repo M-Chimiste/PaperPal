@@ -121,10 +121,7 @@ if __name__ == "__main__":
     abstracts = list(data_df["abstract"])
     
     if verbose:
-        print("Data downloaded successfully")
-    
-    if verbose:
-        print("Generating connection to sqlite3")
+        print(f"Data downloaded successfully. Found {len(abstracts)} papers.")
     
     
     if verbose:
