@@ -63,7 +63,7 @@ def get_desired_content(data_df, recommended):
     urls = list(data_df["url_pdf"])
     content = [f"The following papers have a recommendation of: {recommended}\n"]
     for title, summary, recommendation, url in zip(titles, summaries, recommendation_text, urls):
-        line = f"{title} | {recommendation} | {url} \n -------------- \n {summary}"
+        line = f"{title} | {url} \n -------------- \n {summary}\n"
         content += line
     content = ''.join(content)
     return content
@@ -154,7 +154,6 @@ if __name__ == "__main__":
             model_output = model_output.replace('"related": true', '"related": True')
         if '"related": false' in model_output:
             model_output = model_output.replace('"related": false', '"related": False')
-        print(model_output)
         try:
             output_dict = eval(model_output)  #should be a dict of related: bool, reasoning ; str
             recommendation = output_dict['related']
