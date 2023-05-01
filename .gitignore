@@ -89,6 +89,7 @@ config/creds.json
 models/
 temp_data/
 database/
+csv_output/
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is
