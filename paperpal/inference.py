@@ -162,29 +162,21 @@ class Inference:
     def construct_prompt(self, text):
         """Method to constuct the appropriate Vicuna v1.1 prompt."""
         formatted_prompt = f"""SYSTEM:A chat between a curious human and an artificial intelligence assistant.
-        The assistant gives helpful, detailed, and polite answers to the human's questions.
-        HUMAN: {text} ASSISTANT:"""
+The assistant gives helpful, detailed, and polite answers to the human's questions.
+HUMAN: {text}ASSISTANT:"""
         return formatted_prompt
-    
-
-    def construct_summary_prompt(self, text):
-        """Method to create a summarization prompt for Vicuna v1.1.  Edit this to change behavior of PaperPal"""
-        summary_prompt = f"""Summarize this into a bulletpointed list: {text}"""
-        summary_prompt = self.construct_prompt(summary_prompt)
-        return summary_prompt
     
 
     def construct_research_prompt(self, text, research_interests):
         """Method to create the research specific prompt.  Edit this to change behavior of PaperPal"""
         research_prompt = f"""I have the following research interests:
-        {research_interests}
+{research_interests}
 
-        Based on the content below delimited by <> does this paper directly relate to any of my research interests?
-        Respond in a json with the keys related (bool) and reasoning (str).
+Based on the content below delimited by <> does this paper directly relate to any of my research interests?
+Respond in a json with the keys related (bool) and reasoning (str).
 
-        <{text}>
-        """
-        research_prompt = self.construct_prompt(research_prompt)
+<{text}>
+"""
         return research_prompt
     
 

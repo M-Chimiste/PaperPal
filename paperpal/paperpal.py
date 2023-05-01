@@ -61,28 +61,28 @@ def get_desired_content(data_df, recommended):
     titles = list(data_df["title"])
     recommendation_text = list(data_df["recommended"])
     urls = list(data_df["url_pdf"])
-    content = [f"The following papers have a recommendation of: {recommended}"]
+    content = [f"The following papers have a recommendation of: {recommended}\n"]
     for title, summary, recommendation, url in zip(titles, summaries, recommendation_text, urls):
         line = f"{title} | {recommendation} | {url} \n -------------- \n {summary}"
         content += line
-    content = '\n'.join(content)
+    content = ''.join(content)
     return content
 
 
 def construct_email_body(recommended, unk, not_recommended):
     body = f"""Hello there!  Here is your paper content you requested!
-    These are the following papers I think you might want to look at:
-    {recommended}
+These are the following papers I think you might want to look at:
+{recommended}
 
-    These are the papers I wasn't as sure about:
-    {unk}
+These are the papers I wasn't as sure about:
+{unk}
 
-    These are the papers I didn't think you would want to look at:
-    {not_recommended}
+These are the papers I didn't think you would want to look at:
+{not_recommended}
 
-    Have a wonderful day,
-    ~PaperPal~
-    """
+Have a wonderful day,
+~PaperPal~
+"""
     return body
 
 
@@ -140,20 +140,28 @@ if __name__ == "__main__":
 
     for abstract in tqdm(abstracts, disable=not verbose):
         
-        model_ouput_prompt = llm.construct_research_prompt(abstract, research_interests)
-        print(model_ouput_prompt)
-        model_output = llm.generate(text=model_ouput_prompt,
+        model_output_prompt = llm.construct_research_prompt(abstract, research_interests)
+        model_output = llm.generate(text=model_output_prompt,
                                temp=args.temp,
                                top_k=args.top_k,
                                top_p=args.top_p,
                                num_beams=args.num_beams,
                                max_tokens=args.max_generated_tokens)
         
+        
+
+        if '"related": true' in model_output:
+            model_output = model_output.replace('"related": true', '"related": True')
+        if '"related": false' in model_output:
+            model_output = model_output.replace('"related": false', '"related": False')
         print(model_output)
         try:
             output_dict = eval(model_output)  #should be a dict of related: bool, reasoning ; str
             recommendation = output_dict['related']
             
+            # Sometimes Vicuna get's case of true/false wrong
+            
+
             if recommendation == True:
                 recommendation = 'yes'
             else:
