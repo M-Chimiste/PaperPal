@@ -6,7 +6,7 @@ Please note that this repository is currently a minimum "viable" product.  It ma
 ## Key Features
 - Vicuna 13B model integration for summarization and recommendation.
 - Automated papers with code dowloads (I can use the client, but it's slower and more annoying than just processing the json).
-- Ingestion of recommendations into sqlite3 database for historical tracking (I may convert this to an OpenSearch instance at a later date).
+- Saving outputs as csv or excel (I'm having issues with sqlite for right now but should have them solved soon). 
 - Automated emails sent after completion (presently only planning integration with gmail).
 
 ## Requirements
@@ -27,11 +27,11 @@ Before we get started it's important to note a few things about my current set u
 - Running the script is pretty easy.  In the project directory you can run ```python paperpal/paperpal.py --start_date "2023-04-24"``` and that should launch the program and have it pull data from that date.  You will want to make sure you look at all the arguments to ensure you like the default arguments or pass / change the arguments for your own purpose.
 
 ## ToDo
-- configuration file for passing arguments versus just argparse (allow option to do either)
+- Configuration file for passing arguments versus just argparse (allow option to do either)
+- Dump Data into a Database / Opensearch for follow on analysis
 
 ## Completed
 - Code to download papers with code data and process them.
-- Code to generate a database and code to insert data into it.
 - Code to send emails using Gmail.
 - Generate prompt templates and serving code for Vicuna or other LLMs.
 - Write script to run entire pipeline end-to-end.
