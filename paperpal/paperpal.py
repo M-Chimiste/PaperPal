@@ -27,26 +27,6 @@ def get_research_interests(filename):
     return interests
 
 
-def attempt_to_get_recommendation(text):
-    """Function to quickly get a recommendation.  I tried to prompt the LLM to give me yes/no.
-    TODO - Potentially replace this as a classifier
-    Args:
-        text (str): Model output from LLM
-
-    Returns:
-        str: a yes or no
-    """
-    text = text.lower()
-    if 'yes' in text:
-        recommendation = 'yes'
-    if 'no' in text:
-        recommendation = 'no'
-    else:
-        recommendation = 'unk' # I want to manually review these in my daily df.
-
-    return recommendation
-
-
 def get_desired_content(data_df, recommended):
     """Function to format the data from the filtered dataframe.
 
