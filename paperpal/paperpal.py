@@ -91,9 +91,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     verbose = args.verbose
 
-    if args.db_location == "database/paperpal_sqlite.db":
-        os.makedirs('database', exist_ok=True)
-
     if verbose:
         print("Downloading Paperswithcode Data")
     data = ProcessData(args.start_date, args.end_date)
