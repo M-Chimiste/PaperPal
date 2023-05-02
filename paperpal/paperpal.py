@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--top_p", type=float, default=0.75)
     parser.add_argument("--max_generated_tokens", type=int, default=512)
     parser.add_argument("--sender_address", default=None)
-    parser.add_argument("--receiver_address", default=None)
+    parser.add_argument("--receiver_address", nargs="*", default=[])
     parser.add_argument("--csv", type=bool, default=True)
 
     args = parser.parse_args()
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         os.makedirs('database', exist_ok=True)
 
     if verbose:
-        print("Downloading Paperswithcode Data")
+        print("Downloading Papers with Code Data")
     data = ProcessData(args.start_date, args.end_date)
     data_df = data.download_and_process_data()
     abstracts = list(data_df["abstract"])

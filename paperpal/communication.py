@@ -47,6 +47,8 @@ class GmailCommunication:
         """
         sender_address = self.sender_address
         receiver_address = self.receiver_address
+        if isinstance(receiver_address, list):
+            receiver_address = ', '.join(receiver_address)
         today = datetime.datetime.today()
         today = today.strftime('%B %d, %Y')
         
