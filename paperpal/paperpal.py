@@ -54,11 +54,11 @@ def construct_email_body(recommended, unk, not_recommended):
 These are the following papers I think you might want to look at:
 {recommended}
 
-These are the papers I wasn't as sure about:
-{unk}
-
 These are the papers I didn't think you would want to look at:
 {not_recommended}
+
+These are the papers I wasn't as sure about:
+{unk}
 
 Have a wonderful day,
 ~PaperPal~
@@ -90,9 +90,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     verbose = args.verbose
-
-    if args.db_location == "database/paperpal_sqlite.db":
-        os.makedirs('database', exist_ok=True)
 
     if verbose:
         print("Downloading Papers with Code Data")
