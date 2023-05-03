@@ -13,4 +13,4 @@ prompt-toolkit==3.0.38
 sacremoses
 sentencepiece
 tqdm
-transformers @ git+https://github.com/huggingface/transformers.git@c612628045822f909020f7eb6784c79700813eda
+transformers @ git+https://github.com/huggingface/transformers.git
