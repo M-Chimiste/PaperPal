@@ -12,8 +12,5 @@ peft @ git+https://github.com/huggingface/peft.git
 prompt-toolkit==3.0.38
 sacremoses
 sentencepiece
-torch==1.13.1+cu117
-torchaudio==0.13.1+cu117
-torchvision==0.14.1+cu117
 tqdm
 transformers @ git+https://github.com/huggingface/transformers.git@c612628045822f909020f7eb6784c79700813eda
