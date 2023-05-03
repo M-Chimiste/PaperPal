@@ -4,7 +4,7 @@ arrow
 bitsandbytes
 datasets
 deepspeed
--e git+https://github.com/lm-sys/FastChat.git@50a69c624f3191a31699c29148d1783a6d7034c0#egg=fschat
+-e git+https://github.com/lm-sys/FastChat.git
 huggingface-hub
 numpy
 pandas
