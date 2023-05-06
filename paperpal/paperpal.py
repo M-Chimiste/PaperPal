@@ -1,7 +1,6 @@
 import argparse
 import datetime
 import os
-import sqlite3
 
 import pandas as pd
 from communication import GmailCommunication
@@ -39,10 +38,9 @@ def get_desired_content(data_df, recommended):
     """
     summaries = list(data_df["summary"])
     titles = list(data_df["title"])
-    recommendation_text = list(data_df["recommended"])
     urls = list(data_df["url_pdf"])
     content = [f"The following papers have a recommendation of: {recommended}\n"]
-    for title, summary, url in zip(titles, summaries, urls):
+    for title, summary, url in zip(titles, summaries, urls, ):
         line = f"\n --------------\n{title} | {url}\n{summary}\n --------------\n"
         content += line
     content = ''.join(content)
@@ -112,6 +110,7 @@ if __name__ == "__main__":
     summaries = []
     model_ouputs = []
     recommendations = []
+    rating = []
 
     research_interests = get_research_interests(args.research)
 
@@ -135,9 +134,7 @@ if __name__ == "__main__":
             output_dict = eval(model_output)  #should be a dict of related: bool, reasoning ; str
             recommendation = output_dict['related']
             
-            # Sometimes Vicuna get's case of true/false wrong
-            
-
+            # Sometimes Vicuna get's case of true/false wrong so let's make everything a dictionary
             if recommendation == True:
                 recommendation = 'yes'
             else:
@@ -147,6 +144,7 @@ if __name__ == "__main__":
         except Exception:
             recommendation = 'UNK'
             summary = "UNK"
+            rate = 0
         model_ouputs.append(model_output)
         recommendations.append(recommendation)
         summaries.append(summary)
