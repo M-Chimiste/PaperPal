@@ -4,7 +4,6 @@ arrow
 bitsandbytes
 datasets
 deepspeed
--e git+https://github.com/lm-sys/FastChat.git@50a69c624f3191a31699c29148d1783a6d7034c0#egg=fschat
 huggingface-hub
 numpy
 pandas
@@ -12,8 +11,5 @@ peft @ git+https://github.com/huggingface/peft.git
 prompt-toolkit==3.0.38
 sacremoses
 sentencepiece
-torch==1.13.1+cu117
-torchaudio==0.13.1+cu117
-torchvision==0.14.1+cu117
 tqdm
-transformers @ git+https://github.com/huggingface/transformers.git@c612628045822f909020f7eb6784c79700813eda
+transformers @ git+https://github.com/huggingface/transformers.git
