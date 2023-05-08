@@ -12,7 +12,7 @@ Please note that this repository is currently a minimum "viable" product.  It ma
 ## Requirements
 Before we get started it's important to note a few things about my current set up and PaperPal in general.
 
-- You're probably going to need a pretty good machine for this.  I'm not going to try to support CPUs, but I might try to support M1/2 Macs since I've got one.  If you want to add CPU support please feel free and I'll totally merge that.
+- You're probably going to need a pretty good machine for this.  I'm not going to explicitly support CPUs at this time, but I might try to support M1/2 Macs since I've got one.  If you want to add CPU support or MPS support please feel free and I'll totally merge that.
   - My current system specs:
   - AMD Ryzen 7900X
   - 128GB GDDR5 RAM
