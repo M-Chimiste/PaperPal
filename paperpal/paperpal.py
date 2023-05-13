@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import json
 import os
 
 import pandas as pd
@@ -47,8 +48,16 @@ def get_desired_content(data_df, recommended):
     return content
 
 
-def construct_email_body(recommended, unk, not_recommended):
-    body = f"""Hello there!  Here is your paper content you requested!
+def construct_email_body(recommended,
+                         unk,
+                         not_recommended,
+                         start_date,
+                         end_date):
+    if start_date == end_date:
+        date_range = start_date
+    else:
+        date_range = f"{start_date} - {end_date}"
+    body = f"""Hello there!  Here is your paper content you requested for {date_range}!
 These are the following papers I think you might want to look at:
 {recommended}
 
@@ -73,7 +82,6 @@ if __name__ == "__main__":
     parser.add_argument("--end_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
     parser.add_argument("--research", type=str, default="config/research_interests.txt")
     parser.add_argument("--num_gpus", type=int, default=2)  # you may want to change this to 1 if you are with only a single card.
-    parser.add_argument("--db_location", type=str, default="database/paperpal_sqlite.db")  # I will handle making this directory for you.  If you want to put this somewhere else you need to handle making the folder
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--load_8_bit", type=bool, default=False)
     parser.add_argument("--verbose", type=bool, default=True)  # I like loading bars
@@ -85,13 +93,30 @@ if __name__ == "__main__":
     parser.add_argument("--sender_address", default=None)
     parser.add_argument("--receiver_address", nargs="*", default=[])
     parser.add_argument("--csv", type=bool, default=True)
+    parser.add_argument("--config", default=None)
 
     args = parser.parse_args()
-    verbose = args.verbose
+    args = vars(args)
+
+    if args.get("config"):
+        print("Configuration file used defaults will be overwritten by config file.")
+
+    if args.get("config"):
+        try:
+            with open(args.get("config"), 'r') as f:
+                config_json = json.load(f)
+        except Exception as e:
+            print("Error loading creds file: ", str(e))
+            raise e
+
+    # merge the two dictionaries
+    args.update(config_json)
+
+    verbose = args.get("verbose")
 
     if verbose:
         print("Downloading Papers with Code Data")
-    data = ProcessData(args.start_date, args.end_date)
+    data = ProcessData(args.get("start_date"), args.get("end_date"))
     data_df = data.download_and_process_data()
     abstracts = list(data_df["abstract"])
     
@@ -102,27 +127,27 @@ if __name__ == "__main__":
     if verbose:
         print("Beginning model load")
 
-    llm = Inference(model_name=args.model,
-                    device=args.device,
-                    num_gpus=args.num_gpus,
-                    load_8bit=args.load_8_bit)
+    llm = Inference(model_name=args.get("model"),
+                    device=args.get("device"),
+                    num_gpus=args.get("num_gpus"),
+                    load_8bit=args.get("load_8_bit"))
     
     summaries = []
     model_ouputs = []
     recommendations = []
     rating = []
 
-    research_interests = get_research_interests(args.research)
+    research_interests = get_research_interests(args.get("research"))
 
     for abstract in tqdm(abstracts, disable=not verbose):
         
         model_output_prompt = llm.construct_research_prompt(abstract, research_interests)
         model_output = llm.generate(text=model_output_prompt,
-                               temp=args.temp,
-                               top_k=args.top_k,
-                               top_p=args.top_p,
-                               num_beams=args.num_beams,
-                               max_tokens=args.max_generated_tokens)
+                               temp=args.get("temp"),
+                               top_k=args.get("top_k"),
+                               top_p=args.get("top_p"),
+                               num_beams=args.get("num_beams"),
+                               max_tokens=args.get("max_generated_tokens"))
         
         
 
@@ -156,11 +181,15 @@ if __name__ == "__main__":
     data_df["summary"] = summaries
     data_df["model_output"] = model_ouputs
     
-    if args.csv:
+    if args.get("csv"):
         os.makedirs("csv_output", exist_ok=True)
-        today = datetime.date.today()
-        today_string = today.strftime('%Y-%m-%d')
-        csv_output = f"csv_output/{today_string}-paperpal-output.csv"
+        if args.get("start_date") == args.get("end_date"):
+            date_range = args.get("start_date")
+        else:
+            start_date = args.get("start_date")
+            end_date = args.get("end_date")
+            date_range = f"{start_date}-{end_date}"
+        csv_output = f"csv_output/{date_range}-paperpal-output.csv"
         data_df.to_csv(csv_output)
 
     recommended = data_df.loc[data_df['recommended'] == "yes"]
@@ -173,12 +202,14 @@ if __name__ == "__main__":
 
     body = construct_email_body(recommended=recommended_text,
                                 unk=unk_data_text, 
-                                not_recommended=not_recommended_text)
+                                not_recommended=not_recommended_text,
+                                start_date=args.get("start_date"),
+                                end_date=args.get("end_date"))
 
     if verbose:
         print("Sending an email")
     
-    gmail = GmailCommunication(sender_address=args.sender_address, receiver_address=args.receiver_address, creds_path=args.creds_file)
+    gmail = GmailCommunication(sender_address=args.get("sender_address"), receiver_address=args.get("receiver_address"), creds_path=args.get("creds_file"))
     gmail.compose_message(content=body)
     gmail.send_email()
 

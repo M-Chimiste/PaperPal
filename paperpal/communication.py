@@ -39,7 +39,7 @@ class GmailCommunication:
                     raise Exception("No sender address found.  Please pass a sender address or check your json for sender_address key.")
 
 
-    def compose_message(self, content):
+    def compose_message(self, content, start_date, end_date):
         """Method to compose a MIMEMultipart Message
 
         Args:
@@ -47,10 +47,21 @@ class GmailCommunication:
         """
         sender_address = self.sender_address
         receiver_address = self.receiver_address
+
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            start_date = start_date.strftime("%B %d, %Y")
+        
+        if isinstance(end_date, str):
+            end_date = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date = end_date.strftime("%B %d, %Y")
+
         if isinstance(receiver_address, list):
             receiver_address = ', '.join(receiver_address)
-        today = datetime.datetime.today()
-        today = today.strftime('%B %d, %Y')
+        if start_date == end_date:
+            date_range = start_date
+        else:
+            date_range = f"{start_date} to {end_date}"
         
         if not receiver_address:  # we send the email to ourselves if we aren't sending it to someone else.
             receiver_address = sender_address
@@ -58,7 +69,7 @@ class GmailCommunication:
         message = MIMEMultipart()
         message["From"] = sender_address
         message["To"] = receiver_address
-        message['Subject'] = f"PaperPal Paper Assessment for {today}"
+        message['Subject'] = f"PaperPal Paper Assessment for {date_range}"
         message.attach(MIMEText(content, 'plain'))
         self.email_message = message
     
