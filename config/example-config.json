@@ -1,0 +1,16 @@
+{
+    "model": "models/vicuna-13B-v1",
+    "creds_file": "config/creds.json",
+    "research": "config/research_interests.txt",
+    "num_gpus": 2,
+    "device": "cuda",
+    "load_8-bit": false,
+    "verbose": true,
+    "temp": 1.0,
+    "top_k": 40,
+    "top_p": 0.75,
+    "num_beams": 4,
+    "max_generated_tokens": 512,
+    "csv": true,
+    "receiver_address": ["<example_1>@email.com", "<example_2>@email.com"]
+}   
