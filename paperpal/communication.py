@@ -1,9 +1,10 @@
-import os
 import json
+import os
 import smtplib
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import datetime
+
 
 class GmailCommunication:
 
