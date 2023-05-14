@@ -1,12 +1,12 @@
 # Lines 12 -> 153 Taken from or adapted from FastChat https://github.com/lm-sys/FastChat
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
 import dataclasses
 
 import torch
-from torch import Tensor
 import torch.nn as nn
+from torch import Tensor
 from torch.nn import functional as F
+from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
 
 @dataclasses.dataclass
