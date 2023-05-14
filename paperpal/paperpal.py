@@ -210,7 +210,7 @@ if __name__ == "__main__":
         print("Sending an email")
     
     gmail = GmailCommunication(sender_address=args.get("sender_address"), receiver_address=args.get("receiver_address"), creds_path=args.get("creds_file"))
-    gmail.compose_message(content=body)
+    gmail.compose_message(content=body, start_date=args.get("start_date"), end_date=args.get("end_date"))
     gmail.send_email()
 
     if verbose:
