@@ -1,10 +1,12 @@
-import requests
-import json
-import gzip
-import os
 import datetime
+import gzip
+import json
+import os
 import shutil
+
 import pandas as pd
+import requests
+
 
 class ProcessData:
 
