@@ -105,12 +105,12 @@ if __name__ == "__main__":
         try:
             with open(args.get("config"), 'r') as f:
                 config_json = json.load(f)
+            # merge the two dictionaries
+            args.update(config_json)
         except Exception as e:
             print("Error loading creds file: ", str(e))
             raise e
 
-    # merge the two dictionaries
-    args.update(config_json)
 
     verbose = args.get("verbose")
 
