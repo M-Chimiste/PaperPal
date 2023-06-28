@@ -159,9 +159,13 @@ class Inference:
         self.model, self.tokenizer = load_model(model_name, device, num_gpus, load_8bit, debug)
 
 
-    def construct_prompt(self, text):
+    def construct_prompt(self, text, model='wizard-vicuna'):
         """Method to constuct the appropriate Vicuna v1.1 prompt."""
-        formatted_prompt = f"""SYSTEM:A chat between a curious human and an artificial intelligence assistant.
+        if model == "wizard-vicuna":
+            formatted_prompt = f"""USER: {text}
+            ASSISTANT:"""
+        else:
+            formatted_prompt = f"""SYSTEM:A chat between a curious human and an artificial intelligence assistant.
 The assistant gives helpful, detailed, and polite answers to the human's questions.
 HUMAN: {text}ASSISTANT:"""
         return formatted_prompt
@@ -180,12 +184,13 @@ Respond in a json with the keys related (bool) and reasoning (str).
         return research_prompt
     
 
-    def generate(self, text, temp=1, top_k=40, top_p=0.75, num_beams=4, max_tokens=512, **kwargs):
+    def generate(self, text, model_prompt, temp=1, top_k=40, top_p=0.75, num_beams=4, max_tokens=512, **kwargs):
         """Method to generate LLM inference
 
         Args:
             text (str): Text to feed to model
             temp (int, optional): Temperature value. Defaults to 1.
+            model_prompt (str): Type of prompt to construct.
             top_k (int, optional): Top-K Value. Defaults to 40.
             top_p (float, optional): Top-P Value. Defaults to 0.75.
             num_beams (int, optional): Number of beams for beam search. Defaults to 4.
@@ -196,7 +201,7 @@ Respond in a json with the keys related (bool) and reasoning (str).
             str: Model inference
         """
 
-        prompt = self.construct_prompt(text)
+        prompt = self.construct_prompt(text, model_prompt)
         inputs = self.tokenizer(prompt, return_tensors="pt")
         input_ids = inputs["input_ids"].cuda()
         generation_config = GenerationConfig(

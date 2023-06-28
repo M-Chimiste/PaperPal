@@ -76,7 +76,8 @@ Have a wonderful day,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model", type=str, default="models/vicuna-13B-v1")  # You could change this to TheBloke/vicuna-13B-1.1-HF to download a HF checkpoint or even a 7B model
+    parser.add_argument("--model", type=str, default="models/Wizard-Vicuna-13B-Uncensored")  # You could change this to TheBloke/vicuna-13B-1.1-HF to download a HF checkpoint or even a 7B model
+    parser.add_argument("--model_prompt", type=str, default='wizard-vicuna')
     parser.add_argument("--creds_file", type=str, default="config/creds.json")
     parser.add_argument("--start_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
     parser.add_argument("--end_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
@@ -113,6 +114,7 @@ if __name__ == "__main__":
 
 
     verbose = args.get("verbose")
+    model_prompt = args.get("model_prompt")
 
     if verbose:
         print("Downloading Papers with Code Data")
@@ -147,7 +149,8 @@ if __name__ == "__main__":
                                top_k=args.get("top_k"),
                                top_p=args.get("top_p"),
                                num_beams=args.get("num_beams"),
-                               max_tokens=args.get("max_generated_tokens"))
+                               max_tokens=args.get("max_generated_tokens"),
+                               model_prompt=model_prompt)
         
         
 
