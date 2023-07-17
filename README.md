@@ -17,7 +17,7 @@ Before we get started it's important to note a few things about my current set u
   - AMD Ryzen 7900X
   - 128GB GDDR5 RAM
   - 2 x RTX 3090s with NVLink
-- The default settings inside my arguments are selfish.  I've set it up for the ease of my own use and I highly recommend you configure them for your own useage as needed.  Perhaps I'll make like a config yaml or something that I can pass instead of argparse in the future (added to the TODO).
+- The default settings inside my arguments are selfish.  I've set it up for the ease of my own use and I highly recommend you configure them for your own useage as needed.  
 - I'm presently only supporting sending emails through Gmail.  You can very easily modify my communication.py file to add in normal SMTP support or other API calls.  Gmail just seemed easiest since I don't have an outlook server.  To configure an application password with Gmail check out [these instructions](https://support.google.com/mail/answer/185833?hl=en).  You need to pass these as an argument or add them into a credentials json.  You can see a sample of the credentials in the config folder.
 
 ## Use
