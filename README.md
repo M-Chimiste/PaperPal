@@ -29,6 +29,8 @@ Before we get started it's important to note a few things about my current set u
 ## ToDo
 - Configuration file for passing arguments versus just argparse (allow option to do either).
 - Dump data into a database / Opensearch for follow on analysis.
+- Re-write inference code for more modern inplementation of quanitzation.
+- Update default models to more modern models.
 
 ## Completed
 - Code to download papers with code data and process them.
