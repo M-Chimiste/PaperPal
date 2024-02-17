@@ -1,4 +1,5 @@
 from sys import platform
+from transformers import GenerationConfig
 import torch
 
 
@@ -15,7 +16,7 @@ def load_model(model_name,
               load_8bit=False,
               load_4bit=False,
               max_memory="16GiB"):
-    from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
+    from transformers import AutoModelForCausalLM, AutoTokenizer
     import bitsandbytes as bnb
     
     if device == "cpu":
@@ -51,9 +52,16 @@ def load_model(model_name,
 
 
 class Inference:
+    def __init__(self, model_name, device="cuda", num_gpus="auto", load_4bit=True, load_8bit=False, llama_cpp=False):
+        
+        if platform() != "darwin" or not llama_cpp:
+            self.platform = 'huggingface'
+            self.model, self.tokenizer = load_model(model_name, device, num_gpus, load_8bit, load_4bit)
+        
+        else:
+            self.platform = "llama-cpp"
+            self.model = load_model_mac(model_name)
 
-    def __init__(self, model_name, device="cuda", num_gpus=2, load_8bit=False, debug=False):
-        self.model, self.tokenizer = load_model(model_name, device, num_gpus, load_8bit, debug)
 
 
     def construct_prompt(self, text, model='wizard-vicuna'):
@@ -97,25 +105,29 @@ Respond in a json with the keys related (bool) and reasoning (str).
         Returns:
             str: Model inference
         """
+        if self.platform == "huggingface":
+            prompt = self.construct_prompt(text, model_prompt)
+            inputs = self.tokenizer(prompt, return_tensors="pt")
+            input_ids = inputs["input_ids"].cuda()
+            generation_config = GenerationConfig(
+                temperature=temp,
+                top_p=top_p,
+                top_k=top_k,
+                num_beams=num_beams,
+                **kwargs,)
+            
+            with torch.no_grad():
+                generation_output = self.model.generate(
+                    input_ids=input_ids,
+                    generation_config=generation_config,
+                    return_dict_in_generate=True,
+                    output_scores=True,
+                    max_new_tokens=max_tokens)
+            s = generation_output.sequences[0]
+            output = self.tokenizer.decode(s)
+            output = output.split("ASSISTANT:")[1].strip()
+            return output.strip("<//s>")
 
-        prompt = self.construct_prompt(text, model_prompt)
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        input_ids = inputs["input_ids"].cuda()
-        generation_config = GenerationConfig(
-            temperature=temp,
-            top_p=top_p,
-            top_k=top_k,
-            num_beams=num_beams,
-            **kwargs,)
-        
-        with torch.no_grad():
-            generation_output = self.model.generate(
-                input_ids=input_ids,
-                generation_config=generation_config,
-                return_dict_in_generate=True,
-                output_scores=True,
-                max_new_tokens=max_tokens)
-        s = generation_output.sequences[0]
-        output = self.tokenizer.decode(s)
-        output = output.split("ASSISTANT:")[1].strip()
-        return output.strip("<//s>")
+        elif self.platform == "llama-cpp":
+            # TODO implement llama-cpp inference.
+            return
