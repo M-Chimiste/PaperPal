@@ -1,5 +1,6 @@
 from sys import platform
 from transformers import GenerationConfig
+from .prompts import *
 import torch
 
 
@@ -89,7 +90,16 @@ Respond in a json with the keys related (bool) and reasoning (str).
         return research_prompt
     
 
-    def generate(self, text, model_prompt, temp=1, top_k=40, top_p=0.75, num_beams=4, max_tokens=512, **kwargs):
+    def generate(self,
+                text,
+                model_prompt,
+                temp=0.5,
+                top_k=40,
+                top_p=0.75,
+                num_beams=4, 
+                max_tokens=512,
+                repetition_penalty=1.2,
+                **kwargs):
         """Method to generate LLM inference
 
         Args:
@@ -114,6 +124,7 @@ Respond in a json with the keys related (bool) and reasoning (str).
                 top_p=top_p,
                 top_k=top_k,
                 num_beams=num_beams,
+                repetition_penalty=repetition_penalty,
                 **kwargs,)
             
             with torch.no_grad():
@@ -123,10 +134,11 @@ Respond in a json with the keys related (bool) and reasoning (str).
                     return_dict_in_generate=True,
                     output_scores=True,
                     max_new_tokens=max_tokens)
-            s = generation_output.sequences[0]
-            output = self.tokenizer.decode(s)
-            output = output.split("ASSISTANT:")[1].strip()
-            return output.strip("<//s>")
+            output = self.tokenizer.batch_decode(generation_output[:, input_ids.shape[1]:])[0]  #Need to test if this just returns the generated text
+            # s = generation_output.sequences[0]
+            # output = self.tokenizer.decode(s)
+            # output = output.split("ASSISTANT:")[1].strip()
+            return output.strip(self.tokenizer.eos_token)
 
         elif self.platform == "llama-cpp":
             # TODO implement llama-cpp inference.
