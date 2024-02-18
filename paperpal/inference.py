@@ -1,6 +1,5 @@
 from sys import platform
 from transformers import GenerationConfig
-from .prompts import *
 import torch
 
 
