@@ -93,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_beams", type=int, default=4)
     parser.add_argument("--top_k", type=int, default=40)
     parser.add_argument("--top_p", type=float, default=0.75)
+    parser.add_argument("--repetition_penalty", type=float, default=1.2)
     parser.add_argument("--max_generated_tokens", type=int, default=512)
     parser.add_argument("--sender_address", default=None)
     parser.add_argument("--receiver_address", nargs="*", default=[])
@@ -157,16 +158,16 @@ if __name__ == "__main__":
                                top_p=args.get("top_p"),
                                num_beams=args.get("num_beams"),
                                max_tokens=args.get("max_generated_tokens"),
+                               repetition_penalty=args.get("repetition_penalty")
                                model_prompt=model_prompt)
         
-        
-
+        # check for any mistakes on the LLM
         if '"related": true' in model_output:
-            model_output = model_output.replace('"related": true', '"related": True')
+            model_output = model_output.replace('"related": True', '"related": true')
         if '"related": false' in model_output:
-            model_output = model_output.replace('"related": false', '"related": False')
+            model_output = model_output.replace('"related": False', '"related": false')
         try:
-            output_dict = eval(model_output)  #should be a dict of related: bool, reasoning ; str
+            output_dict = json.loads(model_output)  #should be a dict of related: bool, reasoning ; str
             recommendation = output_dict['related']
             
             # Sometimes Vicuna get's case of true/false wrong so let's make everything a dictionary
