@@ -2,6 +2,7 @@ import argparse
 import datetime
 import json
 import os
+import sys
 
 import pandas as pd
 from communication import GmailCommunication
@@ -27,12 +28,11 @@ def get_research_interests(filename):
     return interests
 
 
-def get_desired_content(data_df, recommended):
+def get_desired_content(data_df):
     """Function to format the data from the filtered dataframe.
 
     Args:
         data_df (df): Data of interest to extract
-        recommended (str): if the text was recommended or not or unk.
 
     Returns:
         str: content of interest
@@ -61,14 +61,16 @@ def construct_email_body(recommended,
 These are the following papers I think you might want to look at:
 {recommended}
 
-These are the papers I didn't think you would want to look at:
+Have a wonderful day,
+~PaperPal~
+
+P.S. These are the papers I didn't think you would want to look at:
 {not_recommended}
 
 These are the papers I wasn't as sure about:
 {unk}
 
-Have a wonderful day,
-~PaperPal~
+
 """
     return body
 
@@ -84,6 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--research", type=str, default="config/research_interests.txt")
     parser.add_argument("--num_gpus", type=int, default=2)  # you may want to change this to 1 if you are with only a single card.
     parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argumment("--load_4_bit", type=bool, default=True)
     parser.add_argument("--load_8_bit", type=bool, default=False)
     parser.add_argument("--verbose", type=bool, default=True)  # I like loading bars
     parser.add_argument("--temp", type=float, default=1.0)
@@ -95,6 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("--receiver_address", nargs="*", default=[])
     parser.add_argument("--csv", type=bool, default=True)
     parser.add_argument("--config", default=None)
+    parser.add_argument("--platform", default=None)
 
     args = parser.parse_args()
     args = vars(args)
@@ -111,7 +115,9 @@ if __name__ == "__main__":
         except Exception as e:
             print("Error loading creds file: ", str(e))
             raise e
-
+    platform = args.get("platform")
+    if not platform:
+        platform = sys.platform()
 
     verbose = args.get("verbose")
     model_prompt = args.get("model_prompt")
@@ -128,11 +134,12 @@ if __name__ == "__main__":
     
     if verbose:
         print("Beginning model load")
-
     llm = Inference(model_name=args.get("model"),
                     device=args.get("device"),
                     num_gpus=args.get("num_gpus"),
-                    load_8bit=args.get("load_8_bit"))
+                    load_8bit=args.get("load_8_bit"),
+                    load_4bit=args.get("load_4_bit"),
+                    platform=platform)
     
     summaries = []
     model_ouputs = []
