@@ -53,9 +53,15 @@ def load_model(model_name,
 
 
 class Inference:
-    def __init__(self, model_name, device="cuda", num_gpus="auto", load_4bit=True, load_8bit=False, llama_cpp=False):
+    def __init__(self,
+                model_name, 
+                device="cuda", 
+                num_gpus="auto", 
+                load_4bit=True, 
+                load_8bit=False, 
+                platform=False):
         
-        if platform() != "darwin" or not llama_cpp:
+        if platform() != "darwin" or platform != "llama-cpp":
             self.platform = 'huggingface'
             self.model, self.tokenizer = load_model(model_name, device, num_gpus, load_8bit, load_4bit)
         
