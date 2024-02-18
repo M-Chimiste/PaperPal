@@ -5,12 +5,19 @@ import os
 import sys
 
 import pandas as pd
-from communication import GmailCommunication
-from inference import Inference
-from processdata import ProcessData
+from .communication import GmailCommunication
+from .inference import Inference
+from .processdata import ProcessData
+from .prompts import *
 from tqdm import tqdm
 
 TODAY = datetime.date.today()
+VALID_PROMPT_TEMPLATES = [
+    "wizard_vicuna_prompt",
+    "vicuna_prompt",
+    "openchat_prompt",
+    "zephyr_prompt"
+    ]
 
 
 def get_research_interests(filename):
@@ -100,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("--csv", type=bool, default=True)
     parser.add_argument("--config", default=None)
     parser.add_argument("--platform", default=None)
+    parser.add_argument("--prompt", type=str, default="openchat_prompt")
 
     args = parser.parse_args()
     args = vars(args)
@@ -158,7 +166,7 @@ if __name__ == "__main__":
                                top_p=args.get("top_p"),
                                num_beams=args.get("num_beams"),
                                max_tokens=args.get("max_generated_tokens"),
-                               repetition_penalty=args.get("repetition_penalty")
+                               repetition_penalty=args.get("repetition_penalty"),
                                model_prompt=model_prompt)
         
         # check for any mistakes on the LLM
