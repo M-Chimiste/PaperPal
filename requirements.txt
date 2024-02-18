@@ -13,3 +13,4 @@ sacremoses
 sentencepiece
 tqdm
 transformers @ git+https://github.com/huggingface/transformers.git
+prompting @ git+https://github.com/M-Chimiste/prompting.git
