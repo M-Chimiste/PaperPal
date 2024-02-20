@@ -69,7 +69,8 @@ class Inference:
             self.model = load_model_mac(model_name)
 
 
-
+    #TODO Both construct prompt and construct research prompt need to be fundementally changed.
+    # construct research prompt needs to be updated in the main paperpal.py file as it's only used there
     def construct_prompt(self, text, model='wizard-vicuna'):
         """Method to constuct the appropriate Vicuna v1.1 prompt."""
         if model == "wizard-vicuna":
