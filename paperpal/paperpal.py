@@ -12,12 +12,12 @@ from .prompts import *
 from tqdm import tqdm
 
 TODAY = datetime.date.today()
-VALID_PROMPT_TEMPLATES = [
-    "wizard_vicuna_prompt",
-    "vicuna_prompt",
-    "openchat_prompt",
-    "zephyr_prompt"
-    ]
+VALID_PROMPT_TEMPLATES = {
+    "wizard_vicuna_prompt": wizard_vicuna_prompt,
+    "vicuna_prompt": vicuna_prompt,
+    "openchat_prompt": openchat_prompt,
+    "zephyr_prompt": zephyr_prompt
+}
 
 
 def get_research_interests(filename):
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     for abstract in tqdm(abstracts, disable=not verbose):
         
         model_output_prompt = llm.construct_research_prompt(abstract, research_interests)
-        model_output = llm.generate(text=model_output_prompt,
+        model_output = llm.generate(prompt=model_output_prompt,
                                temp=args.get("temp"),
                                top_k=args.get("top_k"),
                                top_p=args.get("top_p"),
