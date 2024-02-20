@@ -97,8 +97,7 @@ Respond in a json with the keys related (bool) and reasoning (str).
     
 
     def generate(self,
-                text,
-                model_prompt,
+                prompt,
                 temp=0.5,
                 top_k=40,
                 top_p=0.75,
@@ -122,7 +121,7 @@ Respond in a json with the keys related (bool) and reasoning (str).
             str: Model inference
         """
         if self.platform == "huggingface":
-            prompt = self.construct_prompt(text, model_prompt)
+            # prompt = self.construct_prompt(text, model_prompt)
             inputs = self.tokenizer(prompt, return_tensors="pt")
             input_ids = inputs["input_ids"].cuda()
             generation_config = GenerationConfig(
