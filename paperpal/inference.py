@@ -1,5 +1,4 @@
 from sys import platform
-from transformers import GenerationConfig
 import torch
 
 
@@ -16,8 +15,8 @@ def load_model(model_name,
               load_8bit=False,
               load_4bit=False,
               max_memory="16GiB"):
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    import bitsandbytes as bnb
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from transformers import GenerationConfig
     
     if device == "cpu":
         kwargs = {}
@@ -26,7 +25,7 @@ def load_model(model_name,
         if load_8bit:
             kwargs["load_in_8bit"] = True
         if load_4bit:
-            kwargs["quantization_config"] =  bnb.BitsAndBytesConfig(
+            kwargs["quantization_config"] =  BitsAndBytesConfig(
                                 load_in_4bit=True,
                                 bnb_4bit_quant_type="nf4",
                                 bnb_4bit_use_double_quant=True,
@@ -121,6 +120,8 @@ Respond in a json with the keys related (bool) and reasoning (str).
             str: Model inference
         """
         if self.platform == "huggingface":
+            from transformers import GenerationConfig
+
             # prompt = self.construct_prompt(text, model_prompt)
             inputs = self.tokenizer(prompt, return_tensors="pt")
             input_ids = inputs["input_ids"].cuda()
