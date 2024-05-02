@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model", type=str, default="models/Wizard-Vicuna-13B-Uncensored")  # You could change this to TheBloke/vicuna-13B-1.1-HF to download a HF checkpoint or even a 7B model
-    parser.add_argument("--model_prompt", type=str, default='wizard-vicuna')
+    parser.add_argument("--apply_chat_template", type=bool, default=True)
     parser.add_argument("--creds_file", type=str, default="config/creds.json")
     parser.add_argument("--start_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
     parser.add_argument("--end_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
@@ -85,16 +85,17 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpus", type=int, default=2)  # you may want to change this to 1 if you are with only a single card.
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--load_8_bit", type=bool, default=False)
-    parser.add_argument("--verbose", type=bool, default=True)  # I like loading bars
-    parser.add_argument("--temp", type=float, default=1.0)
-    parser.add_argument("--num_beams", type=int, default=4)
-    parser.add_argument("--top_k", type=int, default=40)
-    parser.add_argument("--top_p", type=float, default=0.75)
+    parser.add_argument("--load_4_bit", type=bool, default=False)
+    parser.add_argument("--verbose", type=bool, default=True)  # I like progress bars
+    parser.add_argument("--temp", type=float, default=0.6)
+    parser.add_argument("--top_p", type=float, default=0.9)
     parser.add_argument("--max_generated_tokens", type=int, default=512)
     parser.add_argument("--sender_address", default=None)
     parser.add_argument("--receiver_address", nargs="*", default=[])
     parser.add_argument("--csv", type=bool, default=True)
     parser.add_argument("--config", default=None)
+    parser.add_argument("--debug", type=bool, default=False)
+    parser.add_argument("--system_prompt", type=str, default=None)
 
     args = parser.parse_args()
     args = vars(args)
@@ -132,8 +133,12 @@ if __name__ == "__main__":
     llm = Inference(model_name=args.get("model"),
                     device=args.get("device"),
                     num_gpus=args.get("num_gpus"),
-                    load_8bit=args.get("load_8_bit"))
-    
+                    load_8bit=args.get("load_8_bit"),
+                    load_4bit=args.get("load_4_bit"),
+                    debug=args.get("debug")
+                    apply_chat_template=args.get("apply_chat_template")
+                    
+                    )
     summaries = []
     model_ouputs = []
     recommendations = []
