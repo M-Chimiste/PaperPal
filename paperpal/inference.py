@@ -2,7 +2,6 @@
 import torch
 from transformers import (AutoModelForCausalLM,
                         AutoTokenizer,
-                        GenerationConfig,
                         BitsAndBytesConfig)
 
 
@@ -12,6 +11,8 @@ def load_model(model_name,
               load_8bit=False,
               load_4bit=False,
               debug=False):
+    
+
     if device == "cpu":
         kwargs = {}
     elif device == "cuda":
@@ -56,30 +57,39 @@ def load_model(model_name,
 
 
 class Inference:
-
     def __init__(self, model_name,
                 device="cuda",
                 num_gpus=1,
                 load_4bit=False,
                 load_8bit=False,
-                debug=False):
+                debug=False,
+                apply_chat_template=False,
+                system_prompt=None,
+                prompt_template=None):
         self.model, self.tokenizer = load_model(model_name,
                                                 device,
                                                 num_gpus,
                                                 load_8bit,
                                                 load_4bit,
                                                 debug)
+        self.apply_chat_template = apply_chat_template
+        self.system_prompt=system_prompt
+        self.prompt_template=prompt_template
 
 
-    def construct_prompt(self, text, model='wizard-vicuna'):
-        """Method to constuct the appropriate Vicuna v1.1 prompt."""
-        if model == "wizard-vicuna":
-            formatted_prompt = f"""USER: {text}
-            ASSISTANT:"""
+    def construct_prompt(self, text):
+        """Method to constuct the appropriate LLM prompt."""
+        if self.apply_chat_template:
+            messages = []
+            if self.system_prompt:
+                messages.append({"role": "system", "content": self.system_prompt})
+            messages.append({"role": "user", "content": text})
+            formatted_prompt = self.tokenizer.apply_chat_template(text, tokenize=False, add_generation_prompt=True)
         else:
-            formatted_prompt = f"""SYSTEM:A chat between a curious human and an artificial intelligence assistant.
-The assistant gives helpful, detailed, and polite answers to the human's questions.
-HUMAN: {text}ASSISTANT:"""
+            print("You are not using the apply chat template.  It's recommended you use a model with a chat template for best results.")
+        if self.prompt_template:
+            formatted_prompt = self.prompt_template.format(text)
+        
         return formatted_prompt
     
 
@@ -115,7 +125,7 @@ Respond in a json with the keys related (bool) and reasoning (str).
 
         prompt = self.construct_prompt(text, model_prompt)
         inputs = self.tokenizer(prompt, return_tensors="pt")
-        input_ids = inputs["input_ids"].to(model.device)
+        input_ids = inputs["input_ids"].to(self.model.device)
         
 
         outputs = self.model.generate(
