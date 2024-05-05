@@ -1,4 +1,4 @@
-1. General information on large language models (LLMs) and their uses.
+1. Mixture of experts in Large Language Models as well as alernative architectures to current large language models.
 2. Training large language models and training advancements to enable: cheaper, faster, better performance.
 3. More efficient inference on large language models.
 4. Information extraction and knowledge graph creation/generation with Large Language Models.
