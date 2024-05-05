@@ -1,3 +1,17 @@
+# Copyright 2023 M Chimiste
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import datetime
 import json
@@ -76,7 +90,7 @@ Have a wonderful day,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model", type=str, default="models/Wizard-Vicuna-13B-Uncensored")  # You could change this to TheBloke/vicuna-13B-1.1-HF to download a HF checkpoint or even a 7B model
+    parser.add_argument("--model", type=str, default="NousResearch/Hermes-2-Pro-Llama-3-8B")
     parser.add_argument("--apply_chat_template", type=bool, default=True)
     parser.add_argument("--creds_file", type=str, default="config/creds.json")
     parser.add_argument("--start_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
@@ -135,10 +149,10 @@ if __name__ == "__main__":
                     num_gpus=args.get("num_gpus"),
                     load_8bit=args.get("load_8_bit"),
                     load_4bit=args.get("load_4_bit"),
-                    debug=args.get("debug")
-                    apply_chat_template=args.get("apply_chat_template")
-                    
+                    debug=args.get("debug"),
+                    apply_chat_template=args.get("apply_chat_template"),
                     )
+    
     summaries = []
     model_ouputs = []
     recommendations = []
