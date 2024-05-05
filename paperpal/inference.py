@@ -18,6 +18,14 @@ from transformers import (AutoModelForCausalLM,
                         BitsAndBytesConfig)
 
 
+SCHEMA = """{
+             "related": bool,
+             "rating": int (from 1 to 5),
+             "rationale": str
+             }"""
+HERMES_DEFAULT_SYSTEM_PROMPT = f"""You are a helpful assistant that answers in JSON. Here's the json schema you must adhere to:\n<schema>\n{SCHEMA}\n</schema><|im_end|>
+
+"""
 def load_model(model_name,
               device,
               num_gpus,
@@ -77,7 +85,7 @@ class Inference:
                 load_8bit=False,
                 debug=False,
                 apply_chat_template=False,
-                system_prompt=None,
+                system_prompt=HERMES_DEFAULT_SYSTEM_PROMPT,
                 prompt_template=None):
         self.model, self.tokenizer = load_model(model_name,
                                                 device,
@@ -111,8 +119,16 @@ class Inference:
         research_prompt = f"""I have the following research interests:
 {research_interests}
 
-Based on the content below delimited by <> does this paper directly relate to any of my research interests?
-Respond in a json with the keys related (bool) and reasoning (str).
+Based on the content below delimited by <> please determine and output the following:
+
+1. Determine if the research presented is related to any of my research interests.
+2. Explain your rational of why this research is or is not related to my research interests with concrete reasons.
+3. Provide a score between 1-5 with the following rubric:
+Score 1: This research has no relevance to my research interests by topic or domain.
+Score 2: This research has no relevance to my research insterests but might be of a similar domain.
+Score 3: This research has relevance to at least one of my research interests.
+Score 4: This research has relevance to more than one of my research interests.
+Score 5: This research has relevance to all of my research interests or has relevance to more than one research interests but has a potentially ground breaking impact on the field.
 
 <{text}>
 """
