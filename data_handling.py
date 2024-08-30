@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from pathlib import Path
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from contextlib import contextmanager
 
 class Paper(BaseModel):
@@ -16,7 +16,8 @@ class Paper(BaseModel):
     cosine_similarity: float
     url: str
 
-    @validator('score')
+    @field_validator('score')
+    @classmethod
     def score_range(cls, v):
         if not 0 <= v <= 10:
             raise ValueError('Score must be between 0 and 10')
