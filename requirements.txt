@@ -19,4 +19,7 @@ anthropic
 openai
 pydantic
 json-repair
+llama-cpp-python
+torch
+torchao
 
