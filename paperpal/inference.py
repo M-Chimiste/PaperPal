@@ -220,3 +220,94 @@ class SentenceTransformerInference:
         Returns:
             tensor: The tensor representation of the messages."""
         return self.model.encode(text, normalize_embeddings=True)
+    
+
+class LocalCPPInference:
+    """
+    LocalCPPInference class for generating responses using llama.cpp bindings.
+
+    This class handles the initialization of the model and provides methods
+    to invoke the model for generating responses based on input messages.
+
+    Attributes:
+        model_name (str): The path to the model file.
+        max_new_tokens (int): The maximum number of tokens to generate in the response.
+        temperature (float): The sampling temperature to use for generation.
+        model: The loaded Llama model.
+
+    Methods:
+        __init__(model_name, max_new_tokens, temperature): Initializes the LocalCPPInference instance.
+        _load_model(): Loads and returns the Llama model.
+        invoke(messages, system_prompt): Generates a response using the model.
+    """
+    def __init__(self, model_name, max_new_tokens=1024, temperature=0.1, tokenizer_model_name=None):
+        self.model_name = model_name
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.model = self._load_model()
+        self.tokenizer_model_name = tokenizer_model_name
+    
+    def _load_model(self):
+        from llama_cpp import Llama
+        import platform
+
+        # Check if running on macOS with Apple Silicon
+        if platform.system() == "Darwin" and platform.machine() == "arm64":
+            # Use Metal for GPU acceleration on Apple Silicon
+            model = Llama(
+                model_path=self.model_name,
+                n_gpu_layers=-1,  # -1 means use all layers
+                n_ctx=8192,  # Adjust context size as needed
+                use_mlock=True,
+            )
+        else:
+            # CPU-only version for other platforms
+            model = Llama(
+                model_path=self.model_name,
+                n_ctx=8192,  # Adjust context size as needed
+                use_mlock=True,
+            )
+        return model
+
+    def invoke(self, messages, system_prompt):
+        """
+        Invoke the model to generate a response based on the given messages.
+
+        Args:
+            messages (list): A list of dictionaries containing the conversation history.
+                             Each dictionary should have 'role' and 'content' keys.
+            system_prompt (str): The system prompt to be used for the model.
+
+        Returns:
+            str: The generated text response from the model.
+
+        Raises:
+            ValueError: If the tokenizer model is not found.
+        """
+        try:
+            from transformers import AutoTokenizer
+        except ImportError:
+            raise ImportError("Please install transformers library: pip install transformers")
+
+        # Use the provided tokenizer_model_name or default to self.model_name
+        model_name = self.tokenizer_model_name or self.model_name
+
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+        except Exception as e:
+            raise ValueError(f"Failed to load tokenizer for model '{model_name}': {str(e)}")
+
+        # Prepare the prompt using the chat template
+        full_messages = [{"role": "system", "content": system_prompt}] + messages
+        full_prompt = tokenizer.apply_chat_template(full_messages, tokenize=False, add_generation_prompt=True)
+
+        # Generate response
+        response = self.model(
+            full_prompt,
+            max_tokens=self.max_new_tokens,
+            temperature=self.temperature,
+            stop=["Human:", "\n"],  # Stop generation at these tokens
+        )
+
+        return response['choices'][0]['text'].strip()
+
