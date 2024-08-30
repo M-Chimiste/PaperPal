@@ -58,7 +58,7 @@ class LocalCudaInference:
         return model, tokenizer
     
 
-    def invoke(self, messages):
+    def invoke(self, messages, system_prompt):
         """
         Invoke the model to generate a response based on the given messages.
 
@@ -73,6 +73,7 @@ class LocalCudaInference:
             This method applies the chat template to the messages, tokenizes the input,
             generates new tokens using the model, and then decodes the output.
         """
+        messages = [{"role": "system", "content": system_prompt}] + messages
         prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda")
         output = self.model.generate(**inputs,
