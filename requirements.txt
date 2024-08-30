@@ -17,4 +17,5 @@ jinja2
 python-dotenv
 anthropic
 openai
+pydantic
 
