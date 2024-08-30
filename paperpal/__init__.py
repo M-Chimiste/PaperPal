@@ -12,4 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.0.2-dev"
+__version__ = "0.0.3-dev"
+from .paperpal import *
+from .prompts import *
+from .inference import *
+from .utils import *
+from .communication import *
