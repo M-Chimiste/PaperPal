@@ -13,3 +13,8 @@ sacremoses
 sentencepiece
 tqdm
 transformers @ git+https://github.com/huggingface/transformers.git
+jinja2
+python-dotenv
+anthropic
+openai
+
