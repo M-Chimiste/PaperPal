@@ -3,11 +3,19 @@ import json
 import datetime
 
 import pandas as pd
+from json_repair import repair_json
 from .communication import GmailCommunication
-from paperpal.paperswithcode import ProcessData
+from .paperswithcode import ProcessData
+from .data_handling import PaperDatabase, Paper, Newsletter
 from tqdm import tqdm
 from dotenv import load_dotenv
-from .prompts import *
+from .prompts import (
+    NEWSLETTER_SYSTEM_PROMPT,
+    RESEARCH_INTERESTS_SYSTEM_PROMPT,
+    newsletter_prompt,
+    research_prompt, #TODO You need to test each of these to figure out what you like better
+    research_interests_prompt
+)
 from .inference import SentenceTransformerInference
 from .utils import cosine_similarity, get_n_days_ago, TODAY
 from .data_handling import PaperDatabase
@@ -19,14 +27,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
 
 
 class PaperPal:
-    #TODO: Add the papers database
-    #TODO: Add the data downloading with paperswithcode
-    #TODO: Embed the abstracts
-    #TODO: Apply cutoff
     #TODO: Run evaluation on papers
     #TODO: apply top_n cutoff
     #TODO: Generate newsletter
     #TODO: Send newsletter email
+    #TODO: Save outpputs to db
     def __init__(self,
                  research_interests_path="config/research_interests.txt",
                  n_days=7,
@@ -38,7 +43,9 @@ class PaperPal:
                  max_new_tokens=1024,
                  temperature=0.1,
                  cosine_similarity_threshold=0.5,
-                 data_path="data/"):
+                 data_path="data/papers.db",
+                 verbose=True):
+        self.verbose = verbose
         self.research_interests_path = research_interests_path
         self.start_date = get_n_days_ago(n_days)
         self.end_date = TODAY
@@ -49,6 +56,7 @@ class PaperPal:
         self.communication = GmailCommunication(sender_address=os.getenv('GMAIL_SENDER_ADDRESS', None),
                                                app_password=os.getenv('GMAIL_APP_PASSWORD', None),
                                                receiver_address=receiver_address)
+        self.papers_db = PaperDatabase(data_path)
         self.embedding_model = SentenceTransformerInference(embedding_model_name, trust_remote_code=trust_remote_code)
         self.cosine_similarity_threshold = cosine_similarity_threshold
         # Load research interests
@@ -77,3 +85,48 @@ class PaperPal:
             self.inference = OpenAIInference(model_name, max_new_tokens, temperature)
         else:
             raise ValueError(f"Invalid model type: {model_type}. Must be one of 'local', 'anthropic', or 'openai'.")
+    
+
+    def download_and_process_papers(self):
+        """
+        Downloads papers from PapersWithCode based on research interests and date range.
+        """
+        process_data = ProcessData(start_date=self.start_date, end_date=self.end_date)
+        
+        data_df = process_data.download_and_process_data(start_date=self.start_date, end_date=self.end_date)
+
+        abstracts = list(data_df['abstract'])
+        abstract_embeddings = []
+        cosine_similarities = []
+        reserch_embedding = self.embedding_model.invoke(self.research_interests)
+        for abstract in tqdm(abstracts, disable=not self.verbose):
+            abstract_embedding = self.embedding_model.invoke(abstract)
+            cosine_similarity = cosine_similarity(abstract_embedding, reserch_embedding)
+            cosine_similarities.append(cosine_similarity)
+            abstract_embeddings.append(abstract_embedding)
+        
+        data_df['cosine_similarity'] = cosine_similarities
+        data_df['abstract_embedding'] = abstract_embeddings
+        # Filter the dataframe based on cosine similarity threshold
+        filtered_df = data_df[data_df['cosine_similarity'] >= self.cosine_similarity_threshold]
+
+        # Reset the index of the filtered dataframe
+        filtered_df = filtered_df.reset_index(drop=True)
+
+        # Update data_df with the filtered results
+        data_df = filtered_df
+
+        return data_df
+    
+
+    def rank_papers(self, data_df):
+        """Evaluates remaining papers and ranks them with the generative model."""
+        abstracts = list(data_df['abstract'])
+        scores = []
+        recommends = []
+        rationale = []
+        for abstract in tqdm(abstracts, disable=not self.verbose):
+            messages = [{"role": "user", "content": research_prompt(self.research_interests, abstract)}]
+            response = self.inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
+        
+
