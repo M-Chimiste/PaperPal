@@ -11,161 +11,211 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 
-import torch
-from transformers import (AutoModelForCausalLM,
-                        AutoTokenizer,
-                        BitsAndBytesConfig)
+class LocalCudaInference:
+    """
+    LocalCudaInference class for generating responses using a pre-trained model on a local GPU.
 
+    This class handles the initialization of the model and tokenizer, and provides methods
+    to invoke the model for generating responses based on input messages.
 
-SCHEMA = """{
-             "related": bool,
-             "rating": int (from 1 to 5),
-             "rationale": str
-             }"""
-HERMES_DEFAULT_SYSTEM_PROMPT = f"""You are a helpful assistant that answers in JSON. Here's the json schema you must adhere to:\n<schema>\n{SCHEMA}\n</schema><|im_end|>
+    Attributes:
+        model_name (str): The name of the pre-trained model to be used.
+        max_new_tokens (int): The maximum number of tokens to generate in the response.
+        temperature (float): The sampling temperature to use for generation.
+        repetition_penalty (float): The repetition penalty to use for generation.
+        model: The loaded model.
+        tokenizer: The loaded tokenizer.
 
-"""
-def load_model(model_name,
-              device,
-              num_gpus,
-              load_8bit=False,
-              load_4bit=False,
-              debug=False):
+    Methods:
+        __init__(model_name, max_new_tokens, temperature, repetition_penalty): Initializes the LocalCudaInference instance.
+        _load_model(): Loads and returns the model and tokenizer.
+        invoke(messages): Generates a response using the model.
+    """
     
-
-    if device == "cpu":
-        kwargs = {}
-    elif device == "cuda":
-        if torch.cuda.is_available() and torch.cuda.get_device_capability() >= (8, 0):
-            kwargs = {"torch_dtype": torch.bfloat16}
-        else:
-            kwargs = {"torch_dtype": torch.float16}
-        if num_gpus == "auto":
-            kwargs["device_map"] = "auto"
-        else:
-            num_gpus = int(num_gpus)
-            if num_gpus != 1:
-                kwargs.update({
-                    "device_map": "auto",
-                    "max_memory": {i: "13GiB" for i in range(num_gpus)},
-                })
-    if load_8bit:
-        bnb_config = BitsAndBytesConfig(
-            load_in_8bit=True
-        )
-        kwargs["quantization_config"] = bnb_config
-    
-    if load_4bit:
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-        kwargs["quantization_config"] = bnb_config
-   
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
-    model = AutoModelForCausalLM.from_pretrained(model_name,
-        low_cpu_mem_usage=True, **kwargs)
-
-    if (device == "cuda" and num_gpus == 1):
-        model.to(device)        
-
-    if debug:
-        print(model)
-
-    return model, tokenizer
-
-
-class Inference:
     def __init__(self, model_name,
-                device="cuda",
-                num_gpus=1,
-                load_4bit=False,
-                load_8bit=False,
-                debug=False,
-                apply_chat_template=False,
-                system_prompt=HERMES_DEFAULT_SYSTEM_PROMPT,
-                prompt_template=None):
-        self.model, self.tokenizer = load_model(model_name,
-                                                device,
-                                                num_gpus,
-                                                load_8bit,
-                                                load_4bit,
-                                                debug)
-        self.apply_chat_template = apply_chat_template
-        self.system_prompt=system_prompt
-        self.prompt_template=prompt_template
+                 max_new_tokens=1024,
+                 temperature=0.1,
+                 repetition_penalty=1.1):
+        self.model_name = model_name
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.repetition_penalty = repetition_penalty
+        self.model, self.tokenizer = self._load_model()
 
-
-    def construct_prompt(self, text):
-        """Method to constuct the appropriate LLM prompt."""
-        if self.apply_chat_template:
-            messages = []
-            if self.system_prompt:
-                messages.append({"role": "system", "content": self.system_prompt})
-            messages.append({"role": "user", "content": text})
-            formatted_prompt = self.tokenizer.apply_chat_template(text, tokenize=False, add_generation_prompt=True)
-        else:
-            print("You are not using the apply chat template.  It's recommended you use a model with a chat template for best results.")
-        if self.prompt_template:
-            formatted_prompt = self.prompt_template.format(text)
-        
-        return formatted_prompt
+    def _load_model(self):
+        import torch
+        import torchao
+        from transformers import AutoModelForCausalLM, AutoTokenizer, TorchAoConfig
+        quantization_config = TorchAoConfig("int4_weight_only",
+                                             group_size=128)
+        model = AutoModelForCausalLM.from_pretrained(self.model_name,
+                                                    device_map="auto",
+                                                    quantization_config=quantization_config)
+        model = torch.compile(model, mode="max-autotune")
+        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        return model, tokenizer
     
 
-    def construct_research_prompt(self, text, research_interests):
-        """Method to create the research specific prompt.  Edit this to change behavior of PaperPal"""
-        research_prompt = f"""I have the following research interests:
-{research_interests}
-
-Based on the content below delimited by <> please determine and output the following:
-
-1. Determine if the research presented is related to any of my research interests.
-2. Explain your rational of why this research is or is not related to my research interests with concrete reasons.
-3. Provide a score between 1-5 with the following rubric:
-
-Score 1: This research has no relevance to my research interests by topic or domain.
-Score 2: This research has no relevance to my research insterests but might be of a similar domain.
-Score 3: This research has relevance to at least one of my research interests.
-Score 4: This research has relevance to more than one of my research interests.
-Score 5: This research has relevance to all of my research interests or has relevance to more than one research interests but has a potentially ground breaking impact on the field.
-
-<{text}>
-"""
-        return research_prompt
-    
-
-    def generate(self, text, model_prompt, temp=0.6, top_p=0.9, max_tokens=512, terminators=None, **kwargs):
-        """Method to generate LLM inference
+    def invoke(self, messages):
+        """
+        Invoke the model to generate a response based on the given messages.
 
         Args:
-            text (str): Text to feed to model
-            temp (int, optional): Temperature value. Defaults to 0.6.
-            model_prompt (str): Type of prompt to construct.
-            top_p (float, optional): Top-P Value. Defaults to 0.9.
-            max_tokens (int, optional): Maximum number of token for . Defaults to 512
-            **kwargs.
+            messages (list): A list of dictionaries containing the conversation history.
+                             Each dictionary should have 'role' and 'content' keys.
 
         Returns:
-            str: Model inference
+            str: The generated text response from the model.
+
+        Note:
+            This method applies the chat template to the messages, tokenizes the input,
+            generates new tokens using the model, and then decodes the output.
         """
-        if not terminators:
-            terminators = self.tokenizer.eos_token_id
+        prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to("cuda")
+        output = self.model.generate(**inputs,
+                                    max_new_tokens=self.max_new_tokens,
+                                    temperature=self.temperature,
+                                    repetition_penalty=self.repetition_penalty)
+        generated_text = self.tokenizer.decode(output[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)[0]
+        return generated_text
+    
 
-        prompt = self.construct_prompt(text, model_prompt)
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        input_ids = inputs["input_ids"].to(self.model.device)
-        
+class AnthropicInference:
+    """
+    AnthropicInference class for generating responses using Anthropic's API.
 
-        outputs = self.model.generate(
-            input_ids,
-            max_new_tokens=max_tokens,
-            eos_token_id=terminators,
-            do_sample=True,
-            temperature=temp,
-            top_p=top_p
+    This class handles the initialization of the Anthropic client and provides methods
+    to invoke the model for generating responses based on input messages and a system prompt.
 
+    Attributes:
+        model_name (str): The name of the Anthropic model to be used.
+        max_new_tokens (int): The maximum number of tokens to generate in the response.
+        temperature (float): The sampling temperature to use for generation.
+        client: The Anthropic client instance.
+
+    Methods:
+        __init__(model_name, max_new_tokens, temperature): Initializes the AnthropicInference instance.
+        _load_model(): Loads and returns the Anthropic client.
+        invoke(messages, system_prompt): Generates a response using the Anthropic model.
+    """
+    def __init__(self, model_name,
+                 max_new_tokens=1024,
+                 temperature=0.1):
+        self.model_name = model_name
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+    
+    def _load_model(self):
+        from anthropic import Anthropic
+        client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        return client
+    
+    def invoke(self, messages, system_prompt):
+        """
+        Invoke the model to generate a response based on the given messages.
+
+        Args:
+            messages (list): A list of dictionaries containing the conversation history.
+                             Each dictionary should have 'role' and 'content' keys.
+            system_prompt (str): The system prompt to be used for the model.
+
+        Returns:
+            str: The generated text response from the model.
+        """
+        response = self.client.messages.create(
+            model=self.model_name,
+            system=system_prompt,
+            messages=messages,
+            max_tokens=self.max_new_tokens,
+            temperature=self.temperature,
         )
-        response = outputs[0][input_ids.shape[-1]:]
-        return self.tokenizer.decode(response, skip_special_tokens=True)
+        return response.content
+
+
+class OpenAIInference:
+    """
+    OpenAIInference class for generating responses using OpenAI's API.
+
+    This class handles the initialization of the OpenAI client and provides methods
+    to invoke the model for generating responses based on input messages and a system prompt.
+
+    Attributes:
+        model_name (str): The name of the OpenAI model to be used.
+        max_new_tokens (int): The maximum number of tokens to generate in the response.
+        temperature (float): The sampling temperature to use for generation.
+        client: The OpenAI client instance.
+
+    Methods:
+        __init__(model_name, max_new_tokens, temperature): Initializes the OpenAIInference instance.
+        _load_model(): Loads and returns the OpenAI client.
+        invoke(messages, system_prompt): Generates a response using the OpenAI model.
+    """
+    def __init__(self, model_name,
+                 max_new_tokens=1024,
+                 temperature=0.1):
+        self.model_name = model_name
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.client = self._load_model()
+    
+    def _load_model(self):
+        from openai import OpenAI
+        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        return client
+    
+    def invoke(self, messages, system_prompt):
+        """
+        Invoke the model to generate a response based on the given messages.
+
+        Args:
+            messages (list): A list of dictionaries containing the conversation history.
+                             Each dictionary should have 'role' and 'content' keys.
+            system_prompt (str): The system prompt to be used for the model.
+
+        Returns:
+            str: The generated text response from the model.
+        """
+        full_messages = [{"role": "system", "content": system_prompt}] + messages
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=full_messages,
+            max_tokens=self.max_new_tokens,
+            temperature=self.temperature,
+        )
+        return response.choices[0].message.content
+
+
+class SentenceTransformerInference:
+    """
+    SentenceTransformerInference class for generating embeddings using a pre-trained Sentence Transformer model.
+
+    Attributes:
+        model_name (str): The name of the pre-trained model to be used.
+        model: The loaded Sentence Transformer model.
+
+    Methods:
+        _load_model(): Loads the Sentence Transformer model.
+        invoke(text): Generates embeddings for the given text.
+    """
+    def __init__(self, model_name, trust_remote_code=False):
+        self.model_name = model_name
+        self.model = self._load_model(trust_remote_code)
+    
+    def _load_model(self, trust_remote_code):
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer(self.model_name, trust_remote_code=trust_remote_code)
+        return model
+    
+    def invoke(self, text):
+        """
+        Invoke the model to generate a response based on the given messages.
+
+        Args:
+            text (str): The text to be embedded.
+
+        Returns:
+            tensor: The tensor representation of the messages."""
+        return self.model.encode(text, normalize_embeddings=True)
