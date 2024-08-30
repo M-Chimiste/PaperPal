@@ -1,15 +1,6 @@
-accelerate
 appdirs
-arrow
-bitsandbytes
-datasets
-deepspeed
-huggingface-hub
 numpy
 pandas
-peft @ git+https://github.com/huggingface/peft.git
-prompt-toolkit==3.0.38
-sacremoses
 sentencepiece
 tqdm
 transformers @ git+https://github.com/huggingface/transformers.git
