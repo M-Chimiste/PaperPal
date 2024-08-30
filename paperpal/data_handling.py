@@ -1,4 +1,5 @@
 import os
+import datetime
 import sqlite3
 from pathlib import Path
 from pydantic import BaseModel, field_validator
@@ -56,11 +57,12 @@ class PaperDatabase:
         _create_table():
             Create the papers table if it doesn't exist.
         
+        _create_connection():
+            Creates a connection to the papers database.
+
         insert_paper(paper: Paper):
             Insert a new paper into the database.
         
-        close():
-            Close the database connection.
     """
     def __init__(self, db_path: str = "papers.db"):
         self.db_path = Path(db_path)
@@ -68,20 +70,16 @@ class PaperDatabase:
         self.conn = self._create_connection()
         self._create_table()
 
+    def _create_connection(self):
+        return sqlite3.connect(str(self.db_path))
+    
     def _ensure_path_exists(self):
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
     @contextmanager
     def get_cursor(self):
-        cursor = self.conn.cursor()
-        try:
-            yield cursor
-            self.conn.commit()
-        except Exception:
-            self.conn.rollback()
-            raise
-        finally:
-            cursor.close()
+        with self._create_connection() as conn:
+            yield conn.cursor()
 
     def _create_table(self):
         with self.get_cursor() as cursor:
@@ -191,10 +189,3 @@ class PaperDatabase:
                               VALUES (?, ?, ?, ?)''',
                            (newsletter.content, newsletter.start_date, newsletter.end_date, newsletter.date_sent))
 
-    def __del__(self):
-        self.close()
-
-    def close(self):
-        if hasattr(self, 'conn') and self.conn:
-            self.conn.close()
-            self.conn = None
