@@ -18,11 +18,12 @@ class Paper(BaseModel):
     authors: str
     date: str
     date_run: str
-    score: float
+    score: float | int
     rationale: str
     recommended: bool
     cosine_similarity: float
     url: str
+    embedding_model: str
 
     @field_validator('score')
     @classmethod
@@ -94,7 +95,8 @@ class PaperDatabase:
                                rationale TEXT NOT NULL,
                                recommended BOOLEAN NOT NULL,
                                cosine_similarity REAL NOT NULL,
-                               url TEXT NOT NULL
+                               url TEXT NOT NULL,
+                               embedding_model TEXT NOT NULL,
                             )''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS newsletters
                               (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,10 +146,11 @@ class PaperDatabase:
         except ValueError:
             raise ValueError("Dates must be in 'YYYY-MM-DD' format")
         with self.get_cursor() as cursor:
-            cursor.execute('''INSERT INTO papers (title, abstract, authors, date, date_run, score, rationale, recommended, cosine_similarity, url)
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            cursor.execute('''INSERT INTO papers (title, abstract, authors, date, date_run, score, rationale, recommended, cosine_similarity, url, embedding_model)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                            (paper.title, paper.abstract, paper.authors, paper.date, paper.date_run, 
-                            paper.score, paper.rationale, paper.recommended, paper.cosine_similarity, paper.url))
+                            paper.score, paper.rationale, paper.recommended, paper.cosine_similarity, 
+                            paper.url, paper.embedding_model))
     
     def insert_newsletter(self, newsletter: Newsletter):
         """
