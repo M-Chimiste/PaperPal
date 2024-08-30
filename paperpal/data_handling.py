@@ -15,7 +15,6 @@ class Newsletter(BaseModel):
 class Paper(BaseModel):
     title: str
     abstract: str
-    authors: str
     date: str
     date_run: str
     score: float | int
@@ -88,7 +87,6 @@ class PaperDatabase:
                               (id INTEGER PRIMARY KEY AUTOINCREMENT,
                                title TEXT NOT NULL,
                                abstract TEXT NOT NULL,
-                               authors TEXT NOT NULL,
                                date TEXT NOT NULL,
                                date_run TEXT NOT NULL,
                                score REAL NOT NULL,
@@ -125,8 +123,8 @@ class PaperDatabase:
             raise ValueError("Input must be a Paper object")
 
         # Validate required fields
-        required_fields = ['title', 'abstract', 'authors', 'date', 'date_run', 
-                           'score', 'rationale', 'recommended', 'cosine_similarity', 'url']
+        required_fields = ['title', 'abstract', 'date', 'date_run', 
+                           'score', 'rationale', 'recommended', 'cosine_similarity', 'url', 'embedding_model']
         for field in required_fields:
             if not hasattr(paper, field) or getattr(paper, field) is None:
                 raise ValueError(f"Paper object is missing required field: {field}")
@@ -146,9 +144,9 @@ class PaperDatabase:
         except ValueError:
             raise ValueError("Dates must be in 'YYYY-MM-DD' format")
         with self.get_cursor() as cursor:
-            cursor.execute('''INSERT INTO papers (title, abstract, authors, date, date_run, score, rationale, recommended, cosine_similarity, url, embedding_model)
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                           (paper.title, paper.abstract, paper.authors, paper.date, paper.date_run, 
+            cursor.execute('''INSERT INTO papers (title, abstract, date, date_run, score, rationale, recommended, cosine_similarity, url, embedding_model)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                           (paper.title, paper.abstract, paper.date, paper.date_run, 
                             paper.score, paper.rationale, paper.recommended, paper.cosine_similarity, 
                             paper.url, paper.embedding_model))
     
