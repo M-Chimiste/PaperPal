@@ -4,7 +4,7 @@ PaperPal is a tool for sorting and analyzing research papers based on your perso
 
 ## Key Features
 
-- Integration with various language models (Vicuna, OpenAI, Anthropic) for paper summarization and recommendation.
+- Integration with various language models (Llama 3.1, OpenAI, Anthropic) for paper summarization and recommendation.
 - Automated paper downloads from Papers with Code.
 - Saving outputs to a SQLite database.
 - Automated email notifications with research digests.
