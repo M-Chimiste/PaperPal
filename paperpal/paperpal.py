@@ -1,229 +1,205 @@
-import argparse
-import datetime
-import json
 import os
+import json
+import datetime
 
 import pandas as pd
-from communication import GmailCommunication
-from inference import Inference
-from processdata import ProcessData
+import json_repair
+from .communication import GmailCommunication, construct_email_body
+from .paperswithcode import ProcessData
+from .data_handling import PaperDatabase, Paper, Newsletter
 from tqdm import tqdm
+from dotenv import load_dotenv
+from .prompts import (
+    NEWSLETTER_SYSTEM_PROMPT,
+    RESEARCH_INTERESTS_SYSTEM_PROMPT,
+    newsletter_prompt,
+    research_prompt, #TODO You need to test each of these to figure out what you like better
+    research_interests_prompt
+)
+from .inference import (
+    SentenceTransformerInference,
+    LocalCPPInference,
+    LocalCudaInference,
+    OpenAIInference,
+    AnthropicInference
+) 
+from .utils import cosine_similarity, get_n_days_ago, TODAY
+from .data_handling import PaperDatabase
 
-TODAY = datetime.date.today()
+load_dotenv()
 
-
-def get_research_interests(filename):
-    """Function to generate the research interests information.
-
-    Args:
-        filename (str): Filename of your text file with research interests.
-
-    Returns:
-        str: concatenated research interests by newline.
-    """
-    with open(filename, 'r') as f:
-        interests = f.readlines()
-    interests = '\n'.join(interests)
-    return interests
-
-
-def get_desired_content(data_df, recommended):
-    """Function to format the data from the filtered dataframe.
-
-    Args:
-        data_df (df): Data of interest to extract
-        recommended (str): if the text was recommended or not or unk.
-
-    Returns:
-        str: content of interest
-    """
-    summaries = list(data_df["summary"])
-    titles = list(data_df["title"])
-    urls = list(data_df["url_pdf"])
-    content = []
-    for title, summary, url in zip(titles, summaries, urls, ):
-        line = f"\n --------------\n{title} | {url}\n{summary}\n --------------\n"
-        content += line
-    content = ''.join(content)
-    return content
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", None)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
+LLAMA_CPP_TOKENIZER = os.getenv("LLAMA_CPP_TOKENIZER", None)
 
 
-def construct_email_body(recommended,
-                         unk,
-                         not_recommended,
-                         start_date,
-                         end_date):
-    if start_date == end_date:
-        date_range = start_date
-    else:
-        date_range = f"{start_date} - {end_date}"
-    body = f"""Hello there!  Here is your paper content you requested for {date_range}!
-These are the following papers I think you might want to look at:
-{recommended}
-
-These are the papers I didn't think you would want to look at:
-{not_recommended}
-
-These are the papers I wasn't as sure about:
-{unk}
-
-Have a wonderful day,
-~PaperPal~
-"""
-    return body
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--model", type=str, default="models/Wizard-Vicuna-13B-Uncensored")  # You could change this to TheBloke/vicuna-13B-1.1-HF to download a HF checkpoint or even a 7B model
-    parser.add_argument("--model_prompt", type=str, default='wizard-vicuna')
-    parser.add_argument("--creds_file", type=str, default="config/creds.json")
-    parser.add_argument("--start_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
-    parser.add_argument("--end_date", type=str, default=TODAY.strftime('%Y-%m-%d'))
-    parser.add_argument("--research", type=str, default="config/research_interests.txt")
-    parser.add_argument("--num_gpus", type=int, default=2)  # you may want to change this to 1 if you are with only a single card.
-    parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--load_8_bit", type=bool, default=False)
-    parser.add_argument("--verbose", type=bool, default=True)  # I like loading bars
-    parser.add_argument("--temp", type=float, default=1.0)
-    parser.add_argument("--num_beams", type=int, default=4)
-    parser.add_argument("--top_k", type=int, default=40)
-    parser.add_argument("--top_p", type=float, default=0.75)
-    parser.add_argument("--max_generated_tokens", type=int, default=512)
-    parser.add_argument("--sender_address", default=None)
-    parser.add_argument("--receiver_address", nargs="*", default=[])
-    parser.add_argument("--csv", type=bool, default=True)
-    parser.add_argument("--config", default=None)
-
-    args = parser.parse_args()
-    args = vars(args)
-
-    if args.get("config"):
-        print("Configuration file used defaults will be overwritten by config file.")
-
-    if args.get("config"):
+class PaperPal:
+    #TODO: Run evaluation on papers
+    #TODO: apply top_n cutoff
+    #TODO: Generate newsletter
+    #TODO: Send newsletter email
+    #TODO: Save outpputs to db
+    def __init__(self,
+                 research_interests_path="config/research_interests.txt",
+                 n_days=7,
+                 top_n=10,
+                 model_type="local",
+                 model_name="NousResearch/Hermes-3-Llama-3.1-8B",
+                 embedding_model_name="Alibaba-NLP/gte-base-en-v1.5",
+                 trust_remote_code=True,
+                 receiver_address=None,
+                 max_new_tokens=1024,
+                 temperature=0.1,
+                 cosine_similarity_threshold=0.5,
+                 data_path="data/papers.db",
+                 verbose=True):
+        self.verbose = verbose
+        self.research_interests_path = research_interests_path
+        self.start_date = get_n_days_ago(n_days)
+        self.end_date = TODAY
+        self.top_n = top_n
+        self.model_type = model_type
+        self.model_name = model_name
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.communication = GmailCommunication(sender_address=os.getenv('GMAIL_SENDER_ADDRESS', None),
+                                               app_password=os.getenv('GMAIL_APP_PASSWORD', None),
+                                               receiver_address=receiver_address)
+        self.papers_db = PaperDatabase(data_path)
+        self.embedding_model_name = embedding_model_name
+        self.embedding_model = SentenceTransformerInference(embedding_model_name, trust_remote_code=trust_remote_code)
+        self.cosine_similarity_threshold = cosine_similarity_threshold
+        # Load research interests
         try:
-            with open(args.get("config"), 'r') as f:
-                config_json = json.load(f)
-            # merge the two dictionaries
-            args.update(config_json)
-        except Exception as e:
-            print("Error loading creds file: ", str(e))
-            raise e
+            with open(self.research_interests_path, 'r') as file:
+                self.research_interests = file.read().strip()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"The research interests file at {self.research_interests_path} could not be found. Please check the path and try again.")
+        except IOError:
+            raise IOError(f"There was an error reading the file at {self.research_interests_path}. Please check the file permissions and try again.")
 
-
-    verbose = args.get("verbose")
-    model_prompt = args.get("model_prompt")
-
-    if verbose:
-        print("Downloading Papers with Code Data")
-    data = ProcessData(args.get("start_date"), args.get("end_date"))
-    data_df = data.download_and_process_data()
-    abstracts = list(data_df["abstract"])
-    
-    if verbose:
-        print(f"Data downloaded successfully. Found {len(abstracts)} papers.")
-    
-    
-    if verbose:
-        print("Beginning model load")
-
-    llm = Inference(model_name=args.get("model"),
-                    device=args.get("device"),
-                    num_gpus=args.get("num_gpus"),
-                    load_8bit=args.get("load_8_bit"))
-    
-    summaries = []
-    model_ouputs = []
-    recommendations = []
-    rating = []
-
-    research_interests = get_research_interests(args.get("research"))
-
-    for abstract in tqdm(abstracts, disable=not verbose):
-        
-        model_output_prompt = llm.construct_research_prompt(abstract, research_interests)
-        model_output = llm.generate(text=model_output_prompt,
-                               temp=args.get("temp"),
-                               top_k=args.get("top_k"),
-                               top_p=args.get("top_p"),
-                               num_beams=args.get("num_beams"),
-                               max_tokens=args.get("max_generated_tokens"),
-                               model_prompt=model_prompt)
-        
-        
-
-        if '"related": true' in model_output:
-            model_output = model_output.replace('"related": true', '"related": True')
-        if '"related": false' in model_output:
-            model_output = model_output.replace('"related": false', '"related": False')
-        try:
-            output_dict = eval(model_output)  #should be a dict of related: bool, reasoning ; str
-            recommendation = output_dict['related']
-            
-            # Sometimes Vicuna get's case of true/false wrong so let's make everything a dictionary
-            if recommendation == True:
-                recommendation = 'yes'
+        # Load model
+        model_type = os.getenv("MODEL_TYPE", "local")
+        if model_type == "local":
+            from .inference import LocalCudaInference
+            import torch
+            if torch.cuda.is_available():
+                self.inference = LocalCudaInference(model_name, max_new_tokens, temperature)
             else:
-                recommendation = 'no'
-
-            summary = output_dict['reasoning']
-        except Exception:
-            recommendation = 'UNK'
-            summary = "UNK"
-            rate = 0
-        model_ouputs.append(model_output)
-        recommendations.append(recommendation)
-        summaries.append(summary)
-
-    if verbose:
-        print("Creating merged df")
-
-    data_df["recommended"] = recommendations
-    data_df["summary"] = summaries
-    data_df["model_output"] = model_ouputs
-    
-    if args.get("csv"):
-        os.makedirs("csv_output", exist_ok=True)
-        if args.get("start_date") == args.get("end_date"):
-            date_range = args.get("start_date")
+                self.inference = LocalCPPInference(model_name, max_new_tokens, temperature, LLAMA_CPP_TOKENIZER)
+        elif model_type == "anthropic":
+            if ANTHROPIC_API_KEY is None:
+                raise ValueError("Anthropic API key is not set. Please check your .env file and ensure ANTHROPIC_API_KEY is properly configured.")
+            from .inference import AnthropicInference
+            self.inference = AnthropicInference(model_name, max_new_tokens, temperature)
+        elif model_type == "openai":
+            if OPENAI_API_KEY is None:
+                raise ValueError("OpenAI API key is not set. Please check your .env file and ensure OPENAI_API_KEY is properly configured.")
+            from .inference import OpenAIInference
+            self.inference = OpenAIInference(model_name, max_new_tokens, temperature)
         else:
-            start_date = args.get("start_date")
-            end_date = args.get("end_date")
-            date_range = f"{start_date}-{end_date}"
-        csv_output = f"csv_output/{date_range}-paperpal-output.csv"
-        data_df.to_csv(csv_output)
-
-    recommended = data_df.loc[data_df['recommended'] == "yes"]
-    not_recommended = data_df.loc[data_df['recommended'] == "no"]
-    unk_data = data_df.loc[data_df['recommended'] == "unk"]
-
-    recommended_text = get_desired_content(recommended, 'yes')
-    not_recommended_text = get_desired_content(not_recommended, 'no')
-    unk_data_text = get_desired_content(unk_data, 'unk')
-
-    body = construct_email_body(recommended=recommended_text,
-                                unk=unk_data_text, 
-                                not_recommended=not_recommended_text,
-                                start_date=args.get("start_date"),
-                                end_date=args.get("end_date"))
-
-    if verbose:
-        print("Sending an email")
-    
-    gmail = GmailCommunication(sender_address=args.get("sender_address"), receiver_address=args.get("receiver_address"), creds_path=args.get("creds_file"))
-    gmail.compose_message(content=body, start_date=args.get("start_date"), end_date=args.get("end_date"))
-    gmail.send_email()
-
-    if verbose:
-        print("Cleaning up...")
-    
-    data.cleanup_temp_and_mem()
-
+            raise ValueError(f"Invalid model type: {model_type}. Must be one of 'local', 'anthropic', or 'openai'.")
     
 
+    def download_and_process_papers(self):
+        """
+        Downloads papers from PapersWithCode based on research interests and date range.
+        """
+        process_data = ProcessData(start_date=self.start_date, end_date=self.end_date)
+        
+        data_df = process_data.download_and_process_data(start_date=self.start_date, end_date=self.end_date)
 
+        abstracts = list(data_df['abstract'])
+        abstract_embeddings = []
+        cosine_similarities = []
+        reserch_embedding = self.embedding_model.invoke(self.research_interests)
+        for abstract in tqdm(abstracts, disable=not self.verbose):
+            abstract_embedding = self.embedding_model.invoke(abstract)
+            cosine_sim = cosine_similarity(abstract_embedding, reserch_embedding)
+            cosine_similarities.append(cosine_sim)
+            abstract_embeddings.append(abstract_embedding)
+        
+        data_df['cosine_similarity'] = cosine_similarities
+        data_df['abstract_embedding'] = abstract_embeddings
+        # Filter the dataframe based on cosine similarity threshold
+        filtered_df = data_df[data_df['cosine_similarity'] >= self.cosine_similarity_threshold]
 
+        # Reset the index of the filtered dataframe
+        filtered_df = filtered_df.reset_index(drop=True)
 
+        # Update data_df with the filtered results
+        data_df = filtered_df
+
+        return data_df
+    
+
+    def rank_papers(self, data_df):
+        """Evaluates remaining papers and ranks them with the generative model."""
+        abstracts = list(data_df['abstract'])
+        scores = []
+        recommends = []
+        rationale = []
+        for abstract in tqdm(abstracts, disable=not self.verbose):
+            messages = [{"role": "user", "content": research_prompt(self.research_interests, abstract)}]
+            response = self.inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
+            response_json = json_repair.loads(response)
+            scores.append(int(response_json['score']))
+            recommends.append(bool(response_json['recommend']))
+            rationale.append(response_json['rationale'])
+        
+        data_df['score'] = scores
+        data_df['recommend'] = recommends
+        data_df['rationale'] = rationale
+        # Sort the DataFrame by score in descending order
+        data_df = data_df.sort_values(by='score', ascending=False)
+        top_n_df = data_df.head(self.top_n)
+
+        # Convert each row of the data_df to a Paper class and place them into a list
+        papers = []
+        for _, row in data_df.iterrows():
+            paper = Paper(
+                title=row['title'],
+                abstract=row['abstract'],
+                url=row['url_pdf'],
+                date_run=TODAY.strftime('%Y-%m-%d'),
+                date=row['date'].strftime('%Y-%m-%d'),
+                score=row['score'],
+                recommend=row['recommend'],
+                rationale=row['rationale'],
+                cosine_similarity=row['cosine_similarity'],
+                embedding_model=self.embedding_model_name
+            )
+            papers.append(paper)
+        
+            self.papers_db.insert_papers(paper)
+        return top_n_df
+    
+    def generate_newsletter(self, top_n_df):
+        """Generates a newsletter from the ranked papers."""
+        content = []
+        for _, row in top_n_df.iterrows():
+            content.append(f"{row['title']}: {row['abstract']}")
+        content = "\n".join(content)
+        content = newsletter_prompt(content, self.research_interests)
+        newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+        newsletter_draft_json = json_repair.loads(newsletter_draft)
+        newsletter_content = newsletter_draft_json['newsletter']
+        
+        newsletter = Newsletter(
+            content=newsletter_content,
+            start_date=self.start_date.strftime('%Y-%m-%d'),
+            end_date=self.end_date.strftime('%Y-%m-%d'),
+            date_sent=TODAY.strftime('%Y-%m-%d')
+        )
+        self.papers_db.insert_newsletter(newsletter)
+
+        email_body = construct_email_body(newsletter_content, self.start_date.strftime('%Y-%m-%d'), self.end_date.strftime('%Y-%m-%d'))
+        self.communication.send_email(email_body)
+
+    def run(self):
+        """Runs the PaperPal system."""
+        data_df = self.download_and_process_papers()
+        top_n_df = self.rank_papers(data_df)
+        self.generate_newsletter(top_n_df)
+        
 

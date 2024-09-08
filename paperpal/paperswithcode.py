@@ -1,3 +1,17 @@
+# Copyright 2023 M Chimiste
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import datetime
 import gzip
 import json
@@ -12,7 +26,7 @@ class ProcessData:
 
     def __init__(self, start_date=None, end_date=None):
         self.paper_dump_url = "https://production-media.paperswithcode.com/about/papers-with-abstracts.json.gz"  #This URL is static and updated daily per https://github.com/paperswithcode/paperswithcode-data
-        # Surpisingly it's faster and easier to download dump than query an API for the most current data.
+        # Surpisingly it's faster and easier to download a dump than query an API for the most current data.
         # Go figure... Please fix this paperswithcode...
         self.start_date = start_date
         self.end_date = end_date
@@ -22,8 +36,8 @@ class ProcessData:
         """Method to download and pre-process data for LLM consumption
 
         Args:
-            start_date (_type_, optional): _description_. Defaults to None.
-            end_date (_type_, optional): _description_. Defaults to None.
+            start_date (str, optional): the string date for the time period selected (MM-DD-YYYY). Defaults to None.
+            end_date (srr, optional): the string date for the time period selected (MM-DD-YYYY). Defaults to None.
 
         Raises:
             ValueError: Failure to provide a start_date
