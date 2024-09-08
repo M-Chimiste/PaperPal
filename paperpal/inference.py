@@ -311,3 +311,57 @@ class LocalCPPInference:
 
         return response['choices'][0]['text'].strip()
 
+class OllamaInference:
+    """
+    OllamaInference is a class that facilitates interaction with the Ollama model for generating responses based on chat messages.
+
+    Args:
+        model_name (str): The name of the model to use for inference. Defaults to "hermes3".
+        max_new_tokens (int): The maximum number of new tokens to generate in the response. Defaults to 4096.
+        temperature (float): The sampling temperature to use for generation. Defaults to 0.1.
+        url (str): The URL of the Ollama inference server. Defaults to "http://127.0.0.1:11434".
+
+    Methods:
+        invoke(messages: list, system_prompt: str):
+            Sends a list of chat messages and a system prompt to the Ollama model and retrieves the generated response.
+            Args:
+                messages (list): A list of chat messages to send to the model.
+                system_prompt (str): The system prompt to be used for the model.
+            Returns:
+                str: The content of the generated response from the model.
+    """
+    def __init__(self, model_name: str = "hermes3", max_new_tokens: int = 4096, temperature: float = 0.1, url: str = "http://127.0.0.1:11434"):
+        self.model_name = model_name
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.url = url
+        self.client = _load_model(url)
+        
+    def _load_model(self, url):
+        from ollama import Client
+        return Client(host=url)
+        
+    def invoke(self, messages: list, system_prompt: str):
+        """
+        Invoke the model to generate a response based on the given messages and system prompt.
+
+        Args:
+            messages (list): A list of dictionaries containing the conversation history.
+                             Each dictionary should have 'role' and 'content' keys.
+            system_prompt (str): The system prompt to be used for the model.
+
+        Returns:
+            str: The generated text response from the model.
+        """
+        # Prepend the system prompt to the messages
+        full_messages = [{"role": "system", "content": system_prompt}] + messages
+        options = {
+            "num_predict": self.max_new_tokens,
+            "temperature": self.temperature
+        }
+        response = self.client.chat(
+            model=self.model_name,
+            messages=full_messages,
+            options=options
+        )
+        return response['message']['content']
