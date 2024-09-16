@@ -3,7 +3,7 @@ numpy
 pandas
 sentencepiece
 tqdm
-transformers @ git+https://github.com/huggingface/transformers.git
+transformers
 jinja2
 python-dotenv
 anthropic
