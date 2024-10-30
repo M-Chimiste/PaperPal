@@ -13,7 +13,7 @@ PaperPal is a tool for sorting and analyzing research papers based on your perso
 ## Requirements
 
 - A machine with good computational resources. CPU support is not explicitly provided, but contributions for CPU or MPS support are welcome.
-- Python 3.7+
+- Python 3.10+
 - PyTorch 2.4+
 - CUDA 11.7+ (for GPU support)
 
