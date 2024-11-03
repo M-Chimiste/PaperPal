@@ -22,7 +22,8 @@ from email.mime.text import MIMEText
 
 def construct_email_body(content,
                          start_date,
-                         end_date):
+                         end_date,
+                         urls_and_titles):
     if start_date == end_date:
         date_range = start_date
     else:
@@ -31,7 +32,8 @@ def construct_email_body(content,
 
 {content}
 
-~PaperPal~
+References:
+{urls_and_titles}
 """
     return body
 
