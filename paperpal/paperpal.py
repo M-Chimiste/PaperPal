@@ -24,7 +24,9 @@ load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", None)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
-LLAMA_CPP_TOKENIZER = os.getenv("LLAMA_CPP_TOKENIZER", None)
+GMAIL_SENDER_ADDRESS = os.getenv("GMAIL_SENDER_ADDRESS", None)
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", None)
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 
 
 class PaperPal:
@@ -52,8 +54,9 @@ class PaperPal:
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
-        self.communication = GmailCommunication(sender_address=os.getenv('GMAIL_SENDER_ADDRESS', None),
-                                               app_password=os.getenv('GMAIL_APP_PASSWORD', None),
+        self.receiver_address = receiver_address
+        self.communication = GmailCommunication(sender_address=GMAIL_SENDER_ADDRESS,
+                                               app_password=GMAIL_APP_PASSWORD,
                                                receiver_address=receiver_address)
         self.papers_db = PaperDatabase(data_path)
         self.embedding_model_name = embedding_model_name
@@ -83,7 +86,7 @@ class PaperPal:
             self.inference = OpenAIInference(model_name, max_new_tokens, temperature)
         elif model_type == "ollama":
             from .inference import OllamaInference
-            self.inference = OllamaInference(model_name, max_new_tokens, temperature)
+            self.inference = OllamaInference(model_name, max_new_tokens, temperature, OLLAMA_URL)
         else:
             raise ValueError(f"Invalid model type: {model_type}. Must be one of 'local', 'anthropic', 'openai', or 'ollama'.")
     
