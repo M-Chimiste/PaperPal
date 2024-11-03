@@ -331,11 +331,18 @@ class OllamaInference:
             Returns:
                 str: The content of the generated response from the model.
     """
-    def __init__(self, model_name: str = "hermes3", max_new_tokens: int = 4096, temperature: float = 0.1, url: str = "http://127.0.0.1:11434"):
+    def __init__(self,
+                 model_name: str = "hermes3",
+                 max_new_tokens: int = 4096,
+                 temperature: float = 0.1,
+                 url: str = "http://127.0.0.1:11434",
+                 num_ctx: int = 131072):
+        
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.url = url
+        self.num_ctx = num_ctx
         self.client = self._load_model(url)
         
     def _load_model(self, url):
@@ -358,7 +365,8 @@ class OllamaInference:
         full_messages = [{"role": "system", "content": system_prompt}] + messages
         options = {
             "num_predict": self.max_new_tokens,
-            "temperature": self.temperature
+            "temperature": self.temperature,
+            "num_ctx": self.num_ctx
         }
         response = self.client.chat(
             model=self.model_name,
