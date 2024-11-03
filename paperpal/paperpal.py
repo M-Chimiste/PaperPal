@@ -16,13 +16,7 @@ from .prompts import (
     research_prompt, #TODO You need to test each of these to figure out what you like better
     research_interests_prompt
 )
-from .inference import (
-    SentenceTransformerInference,
-    LocalCPPInference,
-    LocalCudaInference,
-    OpenAIInference,
-    AnthropicInference
-) 
+from .inference import SentenceTransformerInference
 from .utils import cosine_similarity, get_n_days_ago, TODAY
 from .data_handling import PaperDatabase
 
@@ -43,8 +37,8 @@ class PaperPal:
                  research_interests_path="config/research_interests.txt",
                  n_days=7,
                  top_n=10,
-                 model_type="local",
-                 model_name="NousResearch/Hermes-3-Llama-3.1-8B",
+                 model_type="ollama",
+                 model_name="hermes3",
                  embedding_model_name="Alibaba-NLP/gte-base-en-v1.5",
                  trust_remote_code=True,
                  receiver_address=None,
@@ -80,14 +74,7 @@ class PaperPal:
 
         # Load model
         model_type = os.getenv("MODEL_TYPE", "local")
-        if model_type == "local":
-            from .inference import LocalCudaInference
-            import torch
-            if torch.cuda.is_available():
-                self.inference = LocalCudaInference(model_name, max_new_tokens, temperature)
-            else:
-                self.inference = LocalCPPInference(model_name, max_new_tokens, temperature, LLAMA_CPP_TOKENIZER)
-        elif model_type == "anthropic":
+        if model_type == "anthropic":
             if ANTHROPIC_API_KEY is None:
                 raise ValueError("Anthropic API key is not set. Please check your .env file and ensure ANTHROPIC_API_KEY is properly configured.")
             from .inference import AnthropicInference
@@ -97,8 +84,11 @@ class PaperPal:
                 raise ValueError("OpenAI API key is not set. Please check your .env file and ensure OPENAI_API_KEY is properly configured.")
             from .inference import OpenAIInference
             self.inference = OpenAIInference(model_name, max_new_tokens, temperature)
+        elif model_type == "ollama":
+            from .inference import OllamaInference
+            self.inference = OllamaInference(model_name, max_new_tokens, temperature)
         else:
-            raise ValueError(f"Invalid model type: {model_type}. Must be one of 'local', 'anthropic', or 'openai'.")
+            raise ValueError(f"Invalid model type: {model_type}. Must be one of 'local', 'anthropic', 'openai', or 'ollama'.")
     
 
     def download_and_process_papers(self):
@@ -174,6 +164,7 @@ class PaperPal:
             self.papers_db.insert_papers(paper)
         return top_n_df
     
+
     def generate_newsletter(self, top_n_df):
         """Generates a newsletter from the ranked papers."""
         content = []
@@ -195,6 +186,7 @@ class PaperPal:
 
         email_body = construct_email_body(newsletter_content, self.start_date.strftime('%Y-%m-%d'), self.end_date.strftime('%Y-%m-%d'))
         self.communication.send_email(email_body)
+
 
     def run(self):
         """Runs the PaperPal system."""
