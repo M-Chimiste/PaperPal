@@ -94,7 +94,7 @@ class PaperDatabase:
                                recommended BOOLEAN NOT NULL,
                                cosine_similarity REAL NOT NULL,
                                url TEXT NOT NULL,
-                               embedding_model TEXT NOT NULL,
+                               embedding_model TEXT NOT NULL
                             )''')
             cursor.execute('''CREATE TABLE IF NOT EXISTS newsletters
                               (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,8 +119,6 @@ class PaperDatabase:
             ensuring that the connection is properly committed or rolled back
             in case of an error.
         """
-        if not isinstance(paper, Paper):
-            raise ValueError("Input must be a Paper object")
 
         # Validate required fields
         required_fields = ['title', 'abstract', 'date', 'date_run', 
@@ -165,8 +163,6 @@ class PaperDatabase:
             ensuring that the connection is properly committed or rolled back
             in case of an error.
         """
-        if not isinstance(newsletter, Newsletter):
-            raise ValueError("Input must be a Newsletter object")
 
         # Validate required fields
         required_fields = ['content', 'start_date', 'end_date', 'date_sent']
