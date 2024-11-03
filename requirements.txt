@@ -13,4 +13,4 @@ json-repair
 llama-cpp-python
 torch
 torchao
-
+requests
