@@ -173,7 +173,7 @@ class PaperPal:
         urls_and_titles = []
         for _, row in top_n_df.iterrows():
             content.append(f"{row['title']}: {row['abstract']}")
-            urls_and_titles.append(f"{row['title']}: {row['url']}")
+            urls_and_titles.append(f"{row['title']}: {row['url_pdf']}")
         content = "\n".join(content)
         urls_and_titles = "\n".join(urls_and_titles)
         content = newsletter_prompt(content, self.research_interests)
