@@ -19,7 +19,7 @@ class Paper(BaseModel):
     date_run: str
     score: float | int
     rationale: str
-    recommended: bool
+    related: bool
     cosine_similarity: float
     url: str
     embedding_model: str
@@ -91,7 +91,7 @@ class PaperDatabase:
                                date_run TEXT NOT NULL,
                                score REAL NOT NULL,
                                rationale TEXT NOT NULL,
-                               recommended BOOLEAN NOT NULL,
+                               related BOOLEAN NOT NULL,
                                cosine_similarity REAL NOT NULL,
                                url TEXT NOT NULL,
                                embedding_model TEXT NOT NULL
@@ -122,7 +122,7 @@ class PaperDatabase:
 
         # Validate required fields
         required_fields = ['title', 'abstract', 'date', 'date_run', 
-                           'score', 'rationale', 'recommended', 'cosine_similarity', 'url', 'embedding_model']
+                           'score', 'rationale', 'related', 'cosine_similarity', 'url', 'embedding_model']
         for field in required_fields:
             if not hasattr(paper, field) or getattr(paper, field) is None:
                 raise ValueError(f"Paper object is missing required field: {field}")
@@ -130,22 +130,22 @@ class PaperDatabase:
         # Validate data types
         if not isinstance(paper.score, (int, float)):
             raise ValueError("Score must be a number")
-        if not isinstance(paper.recommended, bool):
-            raise ValueError("Recommended must be a boolean")
+        if not isinstance(paper.related, bool):
+            raise ValueError("Related must be a boolean")
         if not isinstance(paper.cosine_similarity, float):
             raise ValueError("Cosine similarity must be a float")
 
         # Validate date formats
         try:
-            datetime.strptime(paper.date, '%Y-%m-%d')
-            datetime.strptime(paper.date_run, '%Y-%m-%d')
+            datetime.datetime.strptime(paper.date, '%Y-%m-%d')
+            datetime.datetime.strptime(paper.date_run, '%Y-%m-%d')
         except ValueError:
             raise ValueError("Dates must be in 'YYYY-MM-DD' format")
         with self.get_cursor() as cursor:
-            cursor.execute('''INSERT INTO papers (title, abstract, date, date_run, score, rationale, recommended, cosine_similarity, url, embedding_model)
+            cursor.execute('''INSERT INTO papers (title, abstract, date, date_run, score, rationale, related, cosine_similarity, url, embedding_model)
                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                            (paper.title, paper.abstract, paper.date, paper.date_run, 
-                            paper.score, paper.rationale, paper.recommended, paper.cosine_similarity, 
+                            paper.score, paper.rationale, paper.related, paper.cosine_similarity, 
                             paper.url, paper.embedding_model))
     
     def insert_newsletter(self, newsletter: Newsletter):
@@ -172,9 +172,9 @@ class PaperDatabase:
 
         # Validate date formats
         try:
-            datetime.strptime(newsletter.start_date, '%Y-%m-%d')
-            datetime.strptime(newsletter.end_date, '%Y-%m-%d')
-            datetime.strptime(newsletter.date_sent, '%Y-%m-%d')
+            datetime.datetime.strptime(newsletter.start_date, '%Y-%m-%d')
+            datetime.datetime.strptime(newsletter.end_date, '%Y-%m-%d')
+            datetime.datetime.strptime(newsletter.date_sent, '%Y-%m-%d')
         except ValueError:
             raise ValueError("Dates must be in 'YYYY-MM-DD' format")
 
