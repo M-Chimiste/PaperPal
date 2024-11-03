@@ -173,3 +173,4 @@ config/config.json
 
 .DS_Store
 models/
+data/
