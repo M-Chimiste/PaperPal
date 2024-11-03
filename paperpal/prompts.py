@@ -37,6 +37,10 @@ Research interests:
 
 Source material:
 {{title_abstract_content}}
+
+Write the newsletter in the provided JSON schema under draft. The draft should be a string.  Address the reader as "Dear Reader" and sign off as "PaperPal".
+Write in a friendly and engaging tone and try to make the content flow together naturally. Ensure you covert all the papers you were provided in the source material.
+Do not hallucinate and do not make up information.
 """
 
 @prompt
