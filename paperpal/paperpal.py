@@ -34,8 +34,10 @@ class PaperPal:
                  research_interests_path="config/research_interests.txt",
                  n_days=7,
                  top_n=10,
+                 use_different_models=False,
                  model_type="ollama",
                  model_name="hermes3",
+                 orchestration_config="config/orchestration.json",
                  embedding_model_name="Alibaba-NLP/gte-base-en-v1.5",
                  trust_remote_code=True,
                  receiver_address=None,
@@ -49,6 +51,7 @@ class PaperPal:
         self.research_interests_path = research_interests_path
         self.start_date = get_n_days_ago(n_days)
         self.end_date = TODAY
+        self.use_different_models = use_different_models
         self.top_n = top_n
         self.model_type = model_type
         self.model_name = model_name
@@ -72,25 +75,61 @@ class PaperPal:
         except IOError:
             raise IOError(f"There was an error reading the file at {self.research_interests_path}. Please check the file permissions and try again.")
 
-        # Load model
-        model_type = os.getenv("MODEL_TYPE") or self.model_type
+        if not use_different_models:
+            self.inference = self._load_inference_model(self.model_type, model_name, max_new_tokens, temperature)
+        
+        if use_different_models:
+            with open(orchestration_config, 'r') as file:
+                self.orchestration_config = json.load(file)
+            self.judge_model_config = self.orchestration_config['judge_model']
+            self.newsletter_model_config = self.orchestration_config['newsletter_model']
+            self.judge_inference = self._load_inference_model(self.judge_model_config['model_type'],
+                                                                self.judge_model_config['model_name'],
+                                                                self.judge_model_config['max_new_tokens'],
+                                                                self.judge_model_config['temperature'])
+            self.newsletter_inference = self._load_inference_model(self.newsletter_model_config['model_type'],
+                                                                    self.newsletter_model_config['model_name'],
+                                                                    self.newsletter_model_config['max_new_tokens'],
+                                                                    self.newsletter_model_config['temperature'])
+
+    def _load_inference_model(self, model_type, model_name, max_new_tokens, temperature):
+        """Load the appropriate inference model based on model type.
+        
+        Args:
+            model_type (str): Type of model to load ('anthropic', 'openai', or 'ollama')
+            model_name (str): Name of the specific model to load
+            max_new_tokens (int): Maximum number of tokens to generate
+            temperature (float): Temperature parameter for generation
+            
+        Returns:
+            The loaded inference model object
+            
+        Raises:
+            ValueError: If model_type is invalid or required API keys are missing
+        """
+        # Check environment variable override
+        model_type = os.getenv("MODEL_TYPE") or model_type
+        
         if model_type == "anthropic":
             if ANTHROPIC_API_KEY is None:
                 raise ValueError("Anthropic API key is not set. Please check your .env file and ensure ANTHROPIC_API_KEY is properly configured.")
             from .inference import AnthropicInference
-            self.inference = AnthropicInference(model_name, max_new_tokens, temperature)
+            return AnthropicInference(model_name, max_new_tokens, temperature)
             
         elif model_type == "openai":
             if OPENAI_API_KEY is None:
                 raise ValueError("OpenAI API key is not set. Please check your .env file and ensure OPENAI_API_KEY is properly configured.")
             from .inference import OpenAIInference
-            self.inference = OpenAIInference(model_name, max_new_tokens, temperature)
+            return OpenAIInference(model_name, max_new_tokens, temperature)
 
         elif model_type == "ollama":
             from .inference import OllamaInference
-            self.inference = OllamaInference(model_name, max_new_tokens, temperature, OLLAMA_URL)
+            return OllamaInference(model_name, max_new_tokens, temperature, OLLAMA_URL)
         else:
             raise ValueError(f"Invalid model type: {model_type}. Must be one of 'local', 'anthropic', 'openai', or 'ollama'.")
+        
+        
+            
     
 
     def download_and_process_papers(self):
@@ -133,7 +172,10 @@ class PaperPal:
         rationale = []
         for abstract in tqdm(abstracts, disable=not self.verbose):
             messages = [{"role": "user", "content": research_prompt(self.research_interests, abstract)}]
-            response = self.inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
+            if not self.use_different_models:
+                response = self.inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
+            else:
+                response = self.judge_inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
             response_json = json_repair.loads(response)
             scores.append(int(response_json['score']))
             related.append(bool(response_json['related']))
@@ -177,7 +219,10 @@ class PaperPal:
         content = "\n".join(content)
         urls_and_titles = "\n".join(urls_and_titles)
         content = newsletter_prompt(content, self.research_interests)
-        newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+        if not self.use_different_models:
+            newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+        else:
+            newsletter_draft = self.newsletter_inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
         try:
             newsletter_draft_json = json_repair.loads(newsletter_draft)
             newsletter_content = newsletter_draft_json['draft']

@@ -15,11 +15,18 @@ def parse_args():
     parser.add_argument("--top-n", type=int, default=10,
                        help="Number of top papers to return")
     
+    parser.add_argument("--use-different-models", action="store_true", default=True,
+                       help="Whether to use different models for different tasks")
+    
     parser.add_argument("--model-type", type=str, default="ollama",
                        help="Type of model to use")
     
     parser.add_argument("--model-name", type=str, default="hermes3",
                        help="Name of the model to use")
+    
+    parser.add_argument("--orchestration-config", type=str,
+                       default="config/orchestration.json",
+                       help="Path to orchestration config file for multiple models")
     
     parser.add_argument("--embedding-model-name", type=str, 
                        default="Alibaba-NLP/gte-base-en-v1.5",
@@ -58,8 +65,10 @@ if __name__ == "__main__":
         research_interests_path=args.research_interests_path,
         n_days=args.n_days,
         top_n=args.top_n,
+        use_different_models=args.use_different_models,
         model_type=args.model_type,
         model_name=args.model_name,
+        orchestration_config=args.orchestration_config,
         embedding_model_name=args.embedding_model_name,
         trust_remote_code=args.trust_remote_code,
         receiver_address=args.receiver_address,

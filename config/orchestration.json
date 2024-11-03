@@ -1,0 +1,16 @@
+{
+    "judge_model":
+    {
+        "model_name": "hermes3",
+        "model_type": "ollama",
+        "max_new_tokens": 1024,
+        "temperature": 0.1
+    },
+    "newsletter_model":
+    {
+        "model_name": "hermes3",
+        "model_type": "ollama",
+        "max_new_tokens": 4096,
+        "temperature": 0.1
+    }
+}
