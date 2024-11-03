@@ -17,7 +17,7 @@ from .prompts import (
     research_interests_prompt
 )
 from .inference import SentenceTransformerInference
-from .utils import cosine_similarity, get_n_days_ago, TODAY
+from .utils import cosine_similarity, get_n_days_ago, TODAY, purge_ollama_cache
 from .data_handling import PaperDatabase, Paper, Newsletter
 
 load_dotenv()
@@ -200,6 +200,8 @@ class PaperPal:
         data_df = self.download_and_process_papers()
         top_n_df = self.rank_papers(data_df)
         self.generate_newsletter(top_n_df)
+        if self.model_type == "ollama":
+            purge_ollama_cache(OLLAMA_URL, self.model_name)
         
 if __name__ == "__main__":
     paperpal = PaperPal(
