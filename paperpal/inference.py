@@ -311,6 +311,7 @@ class LocalCPPInference:
 
         return response['choices'][0]['text'].strip()
 
+
 class OllamaInference:
     """
     OllamaInference is a class that facilitates interaction with the Ollama model for generating responses based on chat messages.
