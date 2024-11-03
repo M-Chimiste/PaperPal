@@ -336,7 +336,7 @@ class OllamaInference:
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.url = url
-        self.client = _load_model(url)
+        self.client = self._load_model(url)
         
     def _load_model(self, url):
         from ollama import Client
