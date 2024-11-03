@@ -28,11 +28,6 @@ LLAMA_CPP_TOKENIZER = os.getenv("LLAMA_CPP_TOKENIZER", None)
 
 
 class PaperPal:
-    #TODO: Run evaluation on papers
-    #TODO: apply top_n cutoff
-    #TODO: Generate newsletter
-    #TODO: Send newsletter email
-    #TODO: Save outpputs to db
     def __init__(self,
                  research_interests_path="config/research_interests.txt",
                  n_days=7,
@@ -45,6 +40,7 @@ class PaperPal:
                  max_new_tokens=1024,
                  temperature=0.1,
                  cosine_similarity_threshold=0.5,
+                 db_saving=True,
                  data_path="data/papers.db",
                  verbose=True):
         self.verbose = verbose
@@ -63,6 +59,7 @@ class PaperPal:
         self.embedding_model_name = embedding_model_name
         self.embedding_model = SentenceTransformerInference(embedding_model_name, trust_remote_code=trust_remote_code)
         self.cosine_similarity_threshold = cosine_similarity_threshold
+        self.db_saving = db_saving
         # Load research interests
         try:
             with open(self.research_interests_path, 'r') as file:
@@ -160,8 +157,8 @@ class PaperPal:
                 embedding_model=self.embedding_model_name
             )
             papers.append(paper)
-        
-            self.papers_db.insert_papers(paper)
+            if self.db_saving:
+                self.papers_db.insert_papers(paper)
         return top_n_df
     
 
@@ -182,7 +179,8 @@ class PaperPal:
             end_date=self.end_date.strftime('%Y-%m-%d'),
             date_sent=TODAY.strftime('%Y-%m-%d')
         )
-        self.papers_db.insert_newsletter(newsletter)
+        if self.db_saving:  
+            self.papers_db.insert_newsletter(newsletter)
 
         email_body = construct_email_body(newsletter_content, self.start_date.strftime('%Y-%m-%d'), self.end_date.strftime('%Y-%m-%d'))
         self.communication.send_email(email_body)
