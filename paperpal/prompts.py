@@ -3,7 +3,7 @@ from .prompting import prompt
 INTERESTS_SCHEMA = """
 {
     "related": "boolean",
-    "reason": "string",
+    "rationale": "string",
     "score": "int from 1 to 10"
 }
 """
