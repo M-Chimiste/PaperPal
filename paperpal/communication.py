@@ -87,7 +87,7 @@ class GmailCommunication:
         message = MIMEMultipart()
         message["From"] = sender_address
         message["To"] = receiver_address
-        message['Subject'] = f"PaperPal Paper Assessment for {date_range}"
+        message['Subject'] = f"PaperPal Paper Newsletter for {date_range}"
         message.attach(MIMEText(content, 'plain'))
         self.email_message = message
     
