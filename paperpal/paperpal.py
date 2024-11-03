@@ -170,9 +170,12 @@ class PaperPal:
     def generate_newsletter(self, top_n_df):
         """Generates a newsletter from the ranked papers."""
         content = []
+        urls_and_titles = []
         for _, row in top_n_df.iterrows():
             content.append(f"{row['title']}: {row['abstract']}")
+            urls_and_titles.append(f"{row['title']}: {row['url']}")
         content = "\n".join(content)
+        urls_and_titles = "\n".join(urls_and_titles)
         content = newsletter_prompt(content, self.research_interests)
         newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
         try:
@@ -190,7 +193,7 @@ class PaperPal:
         if self.db_saving:  
             self.papers_db.insert_newsletter(newsletter)
 
-        email_body = construct_email_body(newsletter_content, self.start_date.strftime('%Y-%m-%d'), self.end_date.strftime('%Y-%m-%d'))
+        email_body = construct_email_body(newsletter_content, self.start_date.strftime('%Y-%m-%d'), self.end_date.strftime('%Y-%m-%d'), urls_and_titles)
         self.communication.compose_message(email_body, self.start_date, self.end_date)
         self.communication.send_email()
 
