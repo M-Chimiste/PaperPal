@@ -28,7 +28,7 @@ def research_interests_prompt(research_interests, paper_title, paper_abstract):
 
 
 @prompt
-def newsletter_prompt(title_abstract_content, research_interests):
+def newsletter_prompt(title_abstract_content, research_interests, top_n_papers):
     """Use the following research paper content and my research interests in order to write me a personalized newsletter about the source material \
 and how it's related to my research interests.
 
@@ -39,7 +39,8 @@ Source material:
 {{title_abstract_content}}
 
 Write the newsletter in the provided JSON schema under draft. The draft should be a string.  Address the reader as "Dear Reader" and sign off as "PaperPal".
-Write in a friendly and engaging tone and try to make the content flow together naturally. Ensure you covert all the papers you were provided in the source material.
+Write in a friendly and engaging tone and try to make the content flow together naturally. 
+Ensure you covert all the papers you were provided in the source material you should have a total of {{top_n_papers}} papers discussed in the newsletter.
 Do not hallucinate and do not make up information.
 """
 

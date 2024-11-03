@@ -218,7 +218,7 @@ class PaperPal:
             urls_and_titles.append(f"{row['title']}: {row['url_pdf']}")
         content = "\n".join(content)
         urls_and_titles = "\n".join(urls_and_titles)
-        content = newsletter_prompt(content, self.research_interests)
+        content = newsletter_prompt(content, self.research_interests, self.top_n)
         if not self.use_different_models:
             newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
         else:
