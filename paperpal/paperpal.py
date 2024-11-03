@@ -13,12 +13,12 @@ from .prompts import (
     NEWSLETTER_SYSTEM_PROMPT,
     RESEARCH_INTERESTS_SYSTEM_PROMPT,
     newsletter_prompt,
-    research_prompt, #TODO You need to test each of these to figure out what you like better
+    research_prompt,
     research_interests_prompt
 )
 from .inference import SentenceTransformerInference
 from .utils import cosine_similarity, get_n_days_ago, TODAY
-from .data_handling import PaperDatabase
+from .data_handling import PaperDatabase, Paper, Newsletter
 
 load_dotenv()
 
@@ -73,17 +73,19 @@ class PaperPal:
             raise IOError(f"There was an error reading the file at {self.research_interests_path}. Please check the file permissions and try again.")
 
         # Load model
-        model_type = os.getenv("MODEL_TYPE", "local")
+        model_type = os.getenv("MODEL_TYPE") or self.model_type
         if model_type == "anthropic":
             if ANTHROPIC_API_KEY is None:
                 raise ValueError("Anthropic API key is not set. Please check your .env file and ensure ANTHROPIC_API_KEY is properly configured.")
             from .inference import AnthropicInference
             self.inference = AnthropicInference(model_name, max_new_tokens, temperature)
+            
         elif model_type == "openai":
             if OPENAI_API_KEY is None:
                 raise ValueError("OpenAI API key is not set. Please check your .env file and ensure OPENAI_API_KEY is properly configured.")
             from .inference import OpenAIInference
             self.inference = OpenAIInference(model_name, max_new_tokens, temperature)
+
         elif model_type == "ollama":
             from .inference import OllamaInference
             self.inference = OllamaInference(model_name, max_new_tokens, temperature, OLLAMA_URL)
@@ -127,18 +129,18 @@ class PaperPal:
         """Evaluates remaining papers and ranks them with the generative model."""
         abstracts = list(data_df['abstract'])
         scores = []
-        recommends = []
+        related = []
         rationale = []
         for abstract in tqdm(abstracts, disable=not self.verbose):
             messages = [{"role": "user", "content": research_prompt(self.research_interests, abstract)}]
             response = self.inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
             response_json = json_repair.loads(response)
             scores.append(int(response_json['score']))
-            recommends.append(bool(response_json['recommend']))
+            related.append(bool(response_json['related']))
             rationale.append(response_json['rationale'])
         
         data_df['score'] = scores
-        data_df['recommend'] = recommends
+        data_df['related'] = related
         data_df['rationale'] = rationale
         # Sort the DataFrame by score in descending order
         data_df = data_df.sort_values(by='score', ascending=False)
@@ -154,14 +156,14 @@ class PaperPal:
                 date_run=TODAY.strftime('%Y-%m-%d'),
                 date=row['date'].strftime('%Y-%m-%d'),
                 score=row['score'],
-                recommend=row['recommend'],
+                related=row['related'],
                 rationale=row['rationale'],
                 cosine_similarity=row['cosine_similarity'],
                 embedding_model=self.embedding_model_name
             )
             papers.append(paper)
             if self.db_saving:
-                self.papers_db.insert_papers(paper)
+                self.papers_db.insert_paper(paper)
         return top_n_df
     
 
@@ -173,8 +175,11 @@ class PaperPal:
         content = "\n".join(content)
         content = newsletter_prompt(content, self.research_interests)
         newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
-        newsletter_draft_json = json_repair.loads(newsletter_draft)
-        newsletter_content = newsletter_draft_json['newsletter']
+        try:
+            newsletter_draft_json = json_repair.loads(newsletter_draft)
+            newsletter_content = newsletter_draft_json['newsletter']
+        except:
+            newsletter_content = newsletter_draft
         
         newsletter = Newsletter(
             content=newsletter_content,
@@ -195,4 +200,20 @@ class PaperPal:
         top_n_df = self.rank_papers(data_df)
         self.generate_newsletter(top_n_df)
         
-
+if __name__ == "__main__":
+    paperpal = PaperPal(
+                 research_interests_path="config/research_interests.txt",
+                 n_days=7,
+                 top_n=10,
+                 model_type="ollama",
+                 model_name="hermes3",
+                 embedding_model_name="Alibaba-NLP/gte-base-en-v1.5",
+                 trust_remote_code=True,
+                 receiver_address=None,
+                 max_new_tokens=1024,
+                 temperature=0.1,
+                 cosine_similarity_threshold=0.5,
+                 db_saving=True,
+                 data_path="data/papers.db",
+                 verbose=True)
+    paperpal.run()
