@@ -9,7 +9,7 @@ INTERESTS_SCHEMA = """
 """
 NEWSLETTER_SCHEMA = """
 {
-    "newsletter": "string",
+    "draft": "string",
 }
 """
 
