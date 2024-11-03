@@ -177,7 +177,7 @@ class PaperPal:
         newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
         try:
             newsletter_draft_json = json_repair.loads(newsletter_draft)
-            newsletter_content = newsletter_draft_json['newsletter']
+            newsletter_content = newsletter_draft_json['draft']
         except:
             newsletter_content = newsletter_draft
         
@@ -191,7 +191,8 @@ class PaperPal:
             self.papers_db.insert_newsletter(newsletter)
 
         email_body = construct_email_body(newsletter_content, self.start_date.strftime('%Y-%m-%d'), self.end_date.strftime('%Y-%m-%d'))
-        self.communication.send_email(email_body)
+        self.communication.compose_message(email_body, self.start_date, self.end_date)
+        self.communication.send_email()
 
 
     def run(self):
