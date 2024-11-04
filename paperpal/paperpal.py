@@ -1,8 +1,8 @@
 import os
 import json
-import datetime
+# import datetime
 
-import pandas as pd
+# import pandas as pd
 import json_repair
 from .communication import GmailCommunication, construct_email_body
 from .paperswithcode import ProcessData
@@ -14,7 +14,6 @@ from .prompts import (
     RESEARCH_INTERESTS_SYSTEM_PROMPT,
     newsletter_prompt,
     research_prompt,
-    research_interests_prompt
 )
 from .inference import SentenceTransformerInference
 from .utils import cosine_similarity, get_n_days_ago, TODAY, purge_ollama_cache
@@ -34,7 +33,7 @@ class PaperPal:
                  research_interests_path="config/research_interests.txt",
                  n_days=7,
                  top_n=10,
-                 use_different_models=False,
+                 use_different_models=True,
                  model_type="ollama",
                  model_name="hermes3",
                  orchestration_config="config/orchestration.json",
@@ -74,7 +73,7 @@ class PaperPal:
             raise FileNotFoundError(f"The research interests file at {self.research_interests_path} could not be found. Please check the path and try again.")
         except IOError:
             raise IOError(f"There was an error reading the file at {self.research_interests_path}. Please check the file permissions and try again.")
-
+        # Load inference model/s
         if not use_different_models:
             self.inference = self._load_inference_model(self.model_type, model_name, max_new_tokens, temperature)
         
