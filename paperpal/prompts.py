@@ -41,7 +41,10 @@ Source material:
 Write the newsletter in the provided JSON schema under draft. The draft should be a string.  Address the reader as "Dear Reader" and sign off as "PaperPal".
 Write in a friendly and engaging tone and try to make the content flow together naturally. 
 Ensure you covert all the papers you were provided in the source material you should have a total of {{top_n_papers}} papers discussed in the newsletter.
+Elaborate on each paper and explain to the reader why this paper is important, how it's exciting and how it is related to the research interests provided.
+You are allowed to write in depth as this newsletter is meant to be a comprehensive summary of the latest research in a field.
 Do not hallucinate and do not make up information.
+Avoid discussing time and date as the date of the newsletter will be included in the email.
 """
 
 @prompt
