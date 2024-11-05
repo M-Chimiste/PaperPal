@@ -24,6 +24,10 @@ from .llm import (LocalCudaInference,
                    OpenAIInference, 
                    SentenceTransformerInference, 
                    OllamaInference)
-from .utils import *
+from .utils import (cosine_similarity, 
+                    get_n_days_ago, 
+                    TODAY, 
+                    purge_ollama_cache)
 from .communication import construct_email_body, GmailCommunication
 from .data_processing import ProcessData, PaperDatabase, Paper, Newsletter
+from .pdf import parse_pdf_to_markdown, MarkdownParser, ReferencesParser
