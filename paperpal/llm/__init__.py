@@ -1,5 +1,6 @@
 from .inference import (LocalCudaInference, 
                         AnthropicInference, 
                         OpenAIInference, 
-                        SentenceTransformerInference, 
+                        SentenceTransformerInference,
+                        GoogleInference,
                         OllamaInference)

@@ -374,3 +374,84 @@ class OllamaInference:
             options=options
         )
         return response['message']['content']
+
+
+class GeminiInference:
+    """
+    GeminiInference class for generating responses using Google's Gemini API.
+
+    This class handles the initialization of the Gemini client and provides methods
+    to invoke the model for generating responses based on input messages and a system prompt.
+
+    Attributes:
+        model_name (str): The name of the Gemini model to be used.
+        max_new_tokens (int): The maximum number of tokens to generate in the response.
+        temperature (float): The sampling temperature to use for generation.
+        client: The Gemini client instance.
+
+    Methods:
+        __init__(model_name, max_new_tokens, temperature): Initializes the GeminiInference instance.
+        _load_model(): Loads and returns the Gemini client.
+        invoke(messages, system_prompt): Generates a response using the Gemini model.
+    """
+    def __init__(self, model_name="gemini-1.5-flash",
+                 max_new_tokens=4096,
+                 temperature=0.1):
+        self.model_name = model_name
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        # needed to stop the model from blocking certain types of content
+        self.safety = [
+                                {
+                                    "category": "HARM_CATEGORY_HARASSMENT",
+                                    "threshold": "BLOCK_NONE",
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                                    "threshold": "BLOCK_NONE",
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                    "threshold": "BLOCK_NONE",
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                    "threshold": "BLOCK_NONE",
+                                },
+                            ]
+        self.client = self._load_model()
+    
+    def _load_model(self):
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+        return genai
+    
+    def invoke(self, messages: list, system_prompt: str):
+        """
+        Invoke the model to generate a response based on the given messages.
+
+        Args:
+            messages (list): A list of dictionaries containing the conversation history.
+                             Each dictionary should have 'role' and 'content' keys.
+            system_prompt (str): The system prompt to be used for the model.
+
+        Returns:
+            str: The generated text response from the model.
+        """
+        # Prepare the messages in the format Gemini expects
+        gemini_messages = [{"role": "user", "parts": [system_prompt]}]
+        for message in messages:
+            role = "model" if message["role"] == "assistant" else "user"
+            gemini_messages.append({"role": role, "parts": [message["content"]]})
+
+        model = self.client.GenerativeModel(model_name=self.model_name)
+        response = model.generate_content(
+            gemini_messages,
+            safety_settings=self.safety,
+            generation_config=self.client.types.GenerationConfig(
+                max_output_tokens=self.max_new_tokens,
+                temperature=self.temperature
+            )
+        )
+        return response.text
+
