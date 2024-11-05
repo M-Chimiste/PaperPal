@@ -1,22 +1,24 @@
-import os
+# Standard library imports
 import json
-# import datetime
+import os
 
-# import pandas as pd
+# Third-party imports
+from dotenv import load_dotenv
 import json_repair
+from tqdm import tqdm
+
+# Local application imports
 from .communication import GmailCommunication, construct_email_body
 from .data_processing import ProcessData, PaperDatabase, Paper, Newsletter
-from tqdm import tqdm
-from dotenv import load_dotenv
+from .data_processing.data_handling import PaperDatabase, Paper, Newsletter
+from .llm import SentenceTransformerInference
 from .prompt import (
     NEWSLETTER_SYSTEM_PROMPT,
     RESEARCH_INTERESTS_SYSTEM_PROMPT,
     newsletter_prompt,
     research_prompt,
 )
-from .llm import SentenceTransformerInference
 from .utils import cosine_similarity, get_n_days_ago, TODAY, purge_ollama_cache
-from .data_processing.data_handling import PaperDatabase, Paper, Newsletter
 
 load_dotenv()
 
