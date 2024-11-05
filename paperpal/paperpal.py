@@ -5,19 +5,18 @@ import json
 # import pandas as pd
 import json_repair
 from .communication import GmailCommunication, construct_email_body
-from .paperswithcode import ProcessData
-from .data_handling import PaperDatabase, Paper, Newsletter
+from .data_processing import ProcessData, PaperDatabase, Paper, Newsletter
 from tqdm import tqdm
 from dotenv import load_dotenv
-from .prompts import (
+from .prompt import (
     NEWSLETTER_SYSTEM_PROMPT,
     RESEARCH_INTERESTS_SYSTEM_PROMPT,
     newsletter_prompt,
     research_prompt,
 )
-from .inference import SentenceTransformerInference
+from .llm import SentenceTransformerInference
 from .utils import cosine_similarity, get_n_days_ago, TODAY, purge_ollama_cache
-from .data_handling import PaperDatabase, Paper, Newsletter
+from .data_processing.data_handling import PaperDatabase, Paper, Newsletter
 
 load_dotenv()
 
@@ -112,17 +111,17 @@ class PaperPal:
         if model_type == "anthropic":
             if ANTHROPIC_API_KEY is None:
                 raise ValueError("Anthropic API key is not set. Please check your .env file and ensure ANTHROPIC_API_KEY is properly configured.")
-            from .inference import AnthropicInference
+            from .llm.inference import AnthropicInference
             return AnthropicInference(model_name, max_new_tokens, temperature)
             
         elif model_type == "openai":
             if OPENAI_API_KEY is None:
                 raise ValueError("OpenAI API key is not set. Please check your .env file and ensure OPENAI_API_KEY is properly configured.")
-            from .inference import OpenAIInference
+            from .llm.inference import OpenAIInference
             return OpenAIInference(model_name, max_new_tokens, temperature)
 
         elif model_type == "ollama":
-            from .inference import OllamaInference
+            from .llm.inference import OllamaInference
             return OllamaInference(model_name, max_new_tokens, temperature, OLLAMA_URL)
         else:
             raise ValueError(f"Invalid model type: {model_type}. Must be one of 'local', 'anthropic', 'openai', or 'ollama'.")
