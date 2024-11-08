@@ -1,7 +1,7 @@
 import re
 from typing import Dict, Union, List
 from pathlib import Path
-from docling import DocumentConverter
+from docling.document_converter import DocumentConverter
 
 
 def parse_pdf_to_markdown(pdf_path: str) -> str:
