@@ -12,5 +12,19 @@
         "model_type": "ollama",
         "max_new_tokens": 4096,
         "temperature": 0.1
+    },
+    "content_extraction_model":
+    {
+        "model_name": "hermes3",
+        "model_type": "ollama",
+        "max_new_tokens": 4096,
+        "temperature": 0.1
+    },
+    "newsletter_revision_model":
+    {
+        "model_name": "hermes3",
+        "model_type": "ollama",
+        "max_new_tokens": 4096,
+        "temperature": 0.1
     }
 }
