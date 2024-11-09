@@ -81,12 +81,80 @@ Source material:
 
 Write the newsletter in the provided JSON schema under draft. The draft should be a string.  Address the reader as "Dear Reader" and sign off as "PaperPal".
 Write in a friendly and engaging tone and try to make the content flow together naturally. 
-Ensure you covert all the papers you were provided in the source material you should have a total of {{top_n_papers}} papers discussed in the newsletter.
+Ensure you cover all the papers you were provided in the source material you should have a total of {{top_n_papers}} papers discussed in the newsletter.
 Elaborate on each paper and explain to the reader why this paper is important, how it's exciting and how it is related to the research interests provided.
 You are allowed to write in depth as this newsletter is meant to be a comprehensive summary of the latest research in a field.
 Do not hallucinate and do not make up information.
 Avoid discussing time and date as the date of the newsletter will be included in the email.
 """
+    pass
+
+
+@prompt
+def newsletter_context_prompt(research_interests, title_abstract_content):
+    """Use the following research paper content and my research interests to write a section of a personalized newsletter about the source material \
+and how it's related to my research interests.
+
+Research interests:
+{{research_interests}}
+
+Source material:
+{{title_abstract_content}}
+
+Write the newsletter in the provided JSON schema under draft. The draft should be a string.  Do not write any parts of the newsletter other than the section you are working on for that paper.
+Focus on:
+
+* **Relevance:** Connect the research to the reader's interests and goals.
+* **Actionable Advice:** Provide specific takeaways or next steps that the reader can take to learn more or apply the research.
+* **Personal Reflection:** Include a brief personal reflection on the research, such as how it relates to a common challenge or its potential impact. 
+* **Elaboration:** Elaborate on the paper and explain to the reader why this paper is important, how it's exciting and how it is related to the research interests provided. Write at least 4 sentences.
+* **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. - You often get this wrong and have multiple of these in a row.
+
+Write in a friendly and engaging tone.  
+Do not hallucinate or make up information.
+"""
+    pass
+
+
+# @prompt
+# def newsletter_final_prompt(sections):
+#     """Use the following previously generated sections to finish writing the newsletter.
+
+# Sections:
+# {{sections}}
+
+# Write the newsletter in the provided JSON schema under draft. The draft should be a string.
+# Write in a friendly and engaging tone and try to make the content flow together naturally. You must keep all of the content previously generated, \
+# but you can revise it slightly to make it flow better as a single cohesive newsletter. The final newsletter should include a paragraph for introduction \
+# and a paragraph for conclusion along with all the sections provided inbetween.
+# Address the reader as "Dear Reader" and sign off as "PaperPal".
+# Do not hallucinate and do not make up information.
+# Avoid discussing time and date as the date of the newsletter will be included in the email.
+# """
+
+@prompt
+def newsletter_final_prompt(sections):
+    """Finalize the newsletter draft using the following pre-written sections:
+
+{% for section in sections %}
+SECTION {{ loop.index }} START
+{{ section }}
+SECTION {{ loop.index }} END
+
+{% endfor %}
+
+INSTRUCTIONS:
+
+*   **Retain all content:** You MUST include ALL of the provided sections in the final draft without omitting or significantly altering any information.
+*   **Ensure smooth flow:**  Combine the sections into a single cohesive newsletter with a natural flow. Use transition phrases like 'Building on the previous idea...', 'In contrast...', 'Furthermore...' to connect the sections.
+*   **Add introduction and conclusion:** Write an engaging introductory paragraph and a concluding paragraph that summarizes the key takeaways.
+*   **Format:** Address the reader as "Dear Reader" and sign off as "PaperPal".
+
+Write the complete newsletter in the provided JSON schema under 'draft'. 
+Do not hallucinate or make up information.
+Avoid discussing time and date.
+"""
+    pass
 
 
 @prompt
