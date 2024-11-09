@@ -3,3 +3,7 @@
 3. More efficient inference on large language models.
 4. Information extraction and knowledge graph creation/generation with Large Language Models.
 5. Prompt engineering and dataset generation for LLMs.
+6. Agents and agentic systems with large language models.
+7. Multi-modal models and systems with large language models.
+8. Large language models for scientific research and discovery.
+9. I am not interested in robotics.
