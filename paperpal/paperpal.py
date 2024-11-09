@@ -17,6 +17,8 @@ from .prompt import (
     RESEARCH_INTERESTS_SYSTEM_PROMPT,
     newsletter_prompt,
     research_prompt,
+    newsletter_context_prompt,
+    newsletter_final_prompt,
 )
 from .utils import cosine_similarity, get_n_days_ago, TODAY, purge_ollama_cache
 
@@ -213,12 +215,23 @@ class PaperPal:
         """Generates a newsletter from the ranked papers."""
         content = []
         urls_and_titles = []
-        for _, row in top_n_df.iterrows():
-            content.append(f"{row['title']}: {row['abstract']}")
+        for _, row in tqdm(top_n_df.iterrows(), disable=not self.verbose):
+            context = f"Title: {row['title']}\nAbstract: {row['abstract']}\nRationale: {row['rationale']}"
+            messages = [{"role": "user", "content": newsletter_context_prompt(self.research_interests, context)}]
+            
+            if not self.use_different_models:
+                response = self.inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+            else:
+                response = self.newsletter_inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+            
+            response_json = json_repair.loads(response)
+            content.append(response_json['draft'])
             urls_and_titles.append(f"{row['title']}: {row['url_pdf']}")
-        content = "\n".join(content)
+
+        # content = "\n".join(content)
         urls_and_titles = "\n".join(urls_and_titles)
-        content = newsletter_prompt(content, self.research_interests, self.top_n)
+        # content = newsletter_prompt(content, self.research_interests, self.top_n)
+        content = newsletter_final_prompt(content)
         if not self.use_different_models:
             newsletter_draft = self.inference.invoke(messages=[{"role": "user", "content": content}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
         else:
