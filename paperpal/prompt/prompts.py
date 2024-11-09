@@ -119,22 +119,6 @@ Do not hallucinate or make up information.
     pass
 
 
-# @prompt
-# def newsletter_final_prompt(sections):
-#     """Use the following previously generated sections to finish writing the newsletter.
-
-# Sections:
-# {{sections}}
-
-# Write the newsletter in the provided JSON schema under draft. The draft should be a string.
-# Write in a friendly and engaging tone and try to make the content flow together naturally. You must keep all of the content previously generated, \
-# but you can revise it slightly to make it flow better as a single cohesive newsletter. The final newsletter should include a paragraph for introduction \
-# and a paragraph for conclusion along with all the sections provided inbetween.
-# Address the reader as "Dear Reader" and sign off as "PaperPal".
-# Do not hallucinate and do not make up information.
-# Avoid discussing time and date as the date of the newsletter will be included in the email.
-# """
-
 @prompt
 def newsletter_final_prompt(sections):
     """Finalize the newsletter draft using the following pre-written sections:
@@ -160,7 +144,7 @@ Avoid discussing time and date.
     pass
 
 @prompt
-def general_summary_prompt(query_content,):
+def general_summary_prompt(query_content):
     """The following is a research paper extracted into markdown format. \
 Do the following:
 1.) Analyze the input text and generate 5 essential questions that, when answered, capture the main points and core meaning of the text.
