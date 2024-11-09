@@ -55,6 +55,9 @@ Instructions for AI Agent:
 * Offer a balance to Sarah's journalistic approach, bringing in user experience and entrepreneurial considerations.
 * Ensure the dialogue is informative, engaging, and accessible for listeners."""
 
+SYSTEM_CONTENT_EXTRACTION_SUMMARY = """You are an expert AI which helps extract and summarize content from text content. \
+You only respond in JSON format. Here's the json schema you must adhere to:\n<schema>\n{"questions": str, "content": str}\n</schema>."""
+
 SUMMARY_SYSTEM_PROMPT = """You are an expert summarizing AI. You respond in JSON with the following structure: <schema>{"summary": <summary_text>}</schema>."""
 
 
@@ -154,6 +157,23 @@ Write the complete newsletter in the provided JSON schema under 'draft'.
 Do not hallucinate or make up information.
 Avoid discussing time and date.
 """
+    pass
+
+@prompt
+def general_summary_prompt(query_content,):
+    """The following is a research paper extracted into markdown format. \
+Do the following:
+1.) Analyze the input text and generate 5 essential questions that, when answered, capture the main points and core meaning of the text.
+2.) When formulating your questions: 
+    a. Address the central theme or argument of the content
+    b. Identify key supporting ideas 
+    c. Highlight important facts or evidence 
+    d. Reveal the author's purpose or perspective 
+    e. Explore any significant implications or conclusions.
+3.) Answer all of your generated questions one-by-one in detail in the content key.
+4.) If the content is not relevant to the topic of interest or the plan, state that in the content key.
+
+Paper:\n{{query_content}}"""
     pass
 
 
