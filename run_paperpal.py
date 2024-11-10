@@ -12,7 +12,7 @@ def parse_args():
     parser.add_argument("--n-days", type=int, default=7,
                        help="Number of days to look back for papers")
     
-    parser.add_argument("--top-n", type=int, default=10,
+    parser.add_argument("--top-n", type=int, default=5,
                        help="Number of top papers to return")
     
     parser.add_argument("--use-different-models", action="store_true", default=True,

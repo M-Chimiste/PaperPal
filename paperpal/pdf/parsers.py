@@ -1,12 +1,13 @@
 import re
 from typing import Dict, Union, List
 from pathlib import Path
-from docling import DocumentConverter
+from docling.document_converter import DocumentConverter
 import requests
 import warnings
+import os
 
 
-def parse_pdf_to_markdown(pdf_path: str) -> str:
+def parse_pdf_to_markdown(pdf_path):
     """
     Parse a PDF file to markdown using the docling library.
 
@@ -17,8 +18,8 @@ def parse_pdf_to_markdown(pdf_path: str) -> str:
         str: The markdown content of the PDF.
     """
     converter = DocumentConverter()
-    response = converter.converter.convert_single(pdf_path)
-    markdown = response.render_as_markdown()
+    response = converter.convert(pdf_path)
+    markdown = response.document.export_to_markdown()
     return markdown
 
 
@@ -177,12 +178,15 @@ class ArxivData:
         Returns:
             str: The path to the downloaded pdf.
         """
+        
         url = url or self.url
         response = requests.get(url)
         temp_pdf_name = url.split('/')[-1]
         with open(f'temp_data/{temp_pdf_name}', 'wb') as f:
             f.write(response.content)
-        return f'temp_data/{temp_pdf_name}'
+        
+        pdf_path = Path(f'temp_data/{temp_pdf_name}')
+        return pdf_path
     
 
     def download_id(self, arxiv=None):
@@ -199,10 +203,13 @@ class ArxivData:
         response = requests.get(url)
         with open('temp_data/temp.pdf', 'wb') as f:
             f.write(response.content)
-        return 'temp_data/temp.pdf'
+        pdf_path = Path('temp_data/temp.pdf')
+        return pdf_path
     
 
     def extract_content(self):
         """Method to extract the content from the pdf"""
         markdown = parse_pdf_to_markdown(self.pdf_path)
+        if self.pdf_path and os.path.exists(self.pdf_path):
+            os.remove(self.pdf_path)
         return markdown
