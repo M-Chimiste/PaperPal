@@ -110,7 +110,7 @@ Focus on:
 * **Relevance:** Connect the research to the reader's interests and goals.
 * **Actionable Advice:** Provide specific takeaways or next steps that the reader can take to learn more or apply the research.
 * **Personal Reflection:** Include a brief personal reflection on the research, such as how it relates to a common challenge or its potential impact. 
-* **Elaboration:** Elaborate on the paper and explain to the reader why this paper is important, how it's exciting and how it is related to the research interests provided. Write at least 4 sentences but no more than 10 sentences.
+* **Elaboration:** Elaborate on the paper and explain to the reader why this paper is important, how it's exciting and how it is related to the research interests provided. You may write no more than 2 paragraphs.
 * **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The section you are writing should be entirely standalone and not have any of these.
 * **Format:** Create a title for your paragraph and start with that title before writing the content.  The title should be separate from the content by a newline.
 
