@@ -18,13 +18,11 @@ from .prompt import (
     NEWSLETTER_SYSTEM_PROMPT,
     RESEARCH_INTERESTS_SYSTEM_PROMPT,
     SYSTEM_CONTENT_EXTRACTION_SUMMARY,
-    newsletter_prompt,
     general_summary_prompt,
     research_prompt,
     newsletter_context_prompt,
     newsletter_final_prompt,
     newsletter_intro_prompt,
-    newsletter_conclusion_prompt,
 )
 from .utils import cosine_similarity, get_n_days_ago, TODAY, purge_ollama_cache
 
@@ -297,18 +295,7 @@ class PaperPal:
         except:
             newsletter_intro = newsletter_intro
         
-        conclusion_prompt = newsletter_conclusion_prompt(newsletter_intro, sections)
-        if not self.use_different_models:
-            newsletter_conclusion = self.inference.invoke(messages=[{"role": "user", "content": conclusion_prompt}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
-        else:
-            newsletter_conclusion = self.newsletter_draft_inference.invoke(messages=[{"role": "user", "content": conclusion_prompt}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)    
-        try:
-            newsletter_conclusion_json = json_repair.loads(newsletter_conclusion)
-            newsletter_conclusion = newsletter_conclusion_json['draft']
-        except:
-            newsletter_conclusion = newsletter_conclusion
-        
-        newsletter_content = f"{newsletter_intro}\n{sections}\n{newsletter_conclusion}"
+        newsletter_content = f"{newsletter_intro}\n{sections}"
         messages = [{"role": "user", "content": newsletter_final_prompt(newsletter_content)}]
         if not self.use_different_models:
             newsletter_final = self.inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT)
