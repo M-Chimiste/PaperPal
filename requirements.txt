@@ -14,3 +14,4 @@ llama-cpp-python
 torch
 torchao
 requests
+sentence-transformers
