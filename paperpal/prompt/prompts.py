@@ -92,7 +92,6 @@ Avoid discussing time and date as the date of the newsletter will be included in
 """
     pass
 
-
 @prompt
 def newsletter_context_prompt(research_interests, title_abstract_content):
     """Use the following research paper content and my research interests to write a section of a personalized newsletter about the source material \
@@ -111,8 +110,8 @@ Focus on:
 * **Actionable Advice:** Provide specific takeaways or next steps that the reader can take to learn more or apply the research.
 * **Personal Reflection:** Include a brief personal reflection on the research, such as how it relates to a common challenge or its potential impact. 
 * **Elaboration:** Elaborate on the paper and explain to the reader why this paper is important, how it's exciting and how it is related to the research interests provided. You may write no more than 2 paragraphs.
-* **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The section you are writing should be entirely standalone and not have any of these.
-* **Format:** Create a title for your paragraph and start with that title before writing the content.  The title should be separate from the content by a newline.
+* **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The section you are writing should be entirely standalone and not have any of these. Avoid describing my research interests as numbers. I can't always remember what number is which interest.
+* **Format:** Create a title for your section and start with that title before writing the content.  The title should be separate from the content by a newline.
 
 Write in a friendly and engaging tone.  
 Do not hallucinate or make up information.
@@ -128,7 +127,11 @@ CONTENT:
 
 INSTRUCTIONS:
 Revise the content to ensure that it's clean and doesn't have JSON or other formatting errors.
-Your output should be identical to the input except for cleaning up the formatting to ensure that it is ready to be sent in an email.
+Your output should be identical to the input except for cleaning up the formatting to ensure that it is ready to be sent in an email.  Do not remove any content.
+
+The content should be in the following order:
+1. Newsletter Introduction
+2. Newsletter Sections
 
 Re-write the complete newsletter in the provided JSON schema under 'draft'. 
 Do not hallucinate or make up information.
@@ -154,30 +157,6 @@ INSTRUCTIONS:
 *   **Engagement:** Write an engaging introduction that sets the tone for the newsletter and draws the reader in and summarizes the key takeaways.
 *   **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The introduction should be entirely standalone and not have any of these.
 Write the complete introduction in the provided JSON schema under 'draft'. 
-Do not hallucinate or make up information.
-Avoid discussing time and date.
-"""
-    pass
-
-
-@prompt
-def newsletter_conclusion_prompt(introduction, sections):
-    """You are writing the conclusion for a newsletter. Here are already written section contents you are going to use to help write the conclusion of the newsletter:
-SECTION CONTENT:
-{{introduction}}
-{% for section in sections %}
-SECTION {{ loop.index }} START
-{{ section }}
-SECTION {{ loop.index }} END
-
-{% endfor %}
-
-INSTRUCTIONS:
-
-*   **Format:** Sign off as Paperpal. Ensure that the conclusion makes logical sense with the sections provided.
-*   **Engagement:** Write an engaging conclusion that thanks the reader for reading, summarizes the key takeaways, and encourages them to read the papers presented in the newsletter.
-*   **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The conclusion should be entirely standalone and not have any of these.
-Write the complete conclusion in the provided JSON schema under 'draft'. 
 Do not hallucinate or make up information.
 Avoid discussing time and date.
 """
