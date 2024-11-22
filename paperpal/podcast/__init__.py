@@ -1,2 +1,2 @@
 from .podcast import PodcastGenerator
-from .tts import TTSInference
+from .tts import ParlerTTSInference

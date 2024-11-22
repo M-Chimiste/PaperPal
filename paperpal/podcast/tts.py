@@ -4,7 +4,7 @@ from transformers import AutoTokenizer
 import soundfile as sf
 from pathlib import Path
 
-class TTSInference:
+class ParlerTTSInference:
     def __init__(self, output_dir="audio_output", voice_description=None, model_name="parler-tts/parler-tts-mini-v1"):
         """Initialize Parler TTS model"""
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"

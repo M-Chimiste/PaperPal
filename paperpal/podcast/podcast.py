@@ -4,7 +4,7 @@ import os
 from ..pdf import MarkdownParser, parse_pdf_to_markdown
 from ..data_processing import ArxivData
 from ..llm import AnthropicInference, GeminiInference, OpenAIInference, OllamaInference
-from .tts import TTSInference
+from .tts import ParlerTTSInference
 import json
 
 MODEL_CONFIG = {
