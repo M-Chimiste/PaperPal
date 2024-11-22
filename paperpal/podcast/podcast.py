@@ -4,6 +4,7 @@ import os
 from ..pdf import MarkdownParser, parse_pdf_to_markdown
 from ..data_processing import ArxivData
 from ..llm import AnthropicInference, GeminiInference, OpenAIInference, OllamaInference
+from .tts import TTSInference
 import json
 
 MODEL_CONFIG = {
@@ -58,6 +59,8 @@ def get_model(model_config: dict):
         return AnthropicInference(model_config["model"], model_config["max_new_tokens"], model_config["temperature"])
     elif model_config["model_type"] == "gemini":
         return GeminiInference(model_config["model"], model_config["max_new_tokens"], model_config["temperature"])
+    elif model_config["model_type"] == "parler":
+        return TTSInference(model_config["model"])
     else:
         raise ValueError(f"Invalid model type: {model_config['model_type']}")
 
@@ -73,6 +76,7 @@ class PodcastGenerator:
                     self.model_config = json.loads(f.read())
             except (json.JSONDecodeError, FileNotFoundError):
                 raise ValueError("model_config must be either a valid path to a JSON file or a dictionary")
+        
         self.model_config = model_config
         self.stage_1_model = get_model(self.model_config["podcast_stage_1"])
         self.stage_2_model = get_model(self.model_config["podcast_stage_2"])
