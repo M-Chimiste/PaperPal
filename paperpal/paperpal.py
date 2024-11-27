@@ -41,6 +41,8 @@ class PaperPal:
                  research_interests_path="config/research_interests.txt",
                  n_days=7,
                  top_n=5,
+                 start_date=None,
+                 end_date=None,
                  use_different_models=True,
                  model_type="ollama",
                  model_name="hermes3",
@@ -56,6 +58,23 @@ class PaperPal:
                  verbose=True):
         self.verbose = verbose
         self.research_interests_path = research_interests_path
+        if start_date is None and end_date is None:
+            self.start_date = get_n_days_ago(n_days)
+            self.end_date = TODAY
+        else:
+            def try_parse_date(date_str):
+                if not date_str:
+                    return None
+                formats = ["%Y-%m-%d", "%m-%d-%Y"]
+                for fmt in formats:
+                    try:
+                        return datetime.strptime(date_str, fmt).date()
+                    except ValueError:
+                        continue
+                raise ValueError("Dates must be in YYYY-MM-DD or MM-DD-YYYY format")
+
+            self.start_date = try_parse_date(start_date) or get_n_days_ago(n_days)
+            self.end_date = try_parse_date(end_date) or TODAY
         self.start_date = get_n_days_ago(n_days)
         self.end_date = TODAY
         self.use_different_models = use_different_models
