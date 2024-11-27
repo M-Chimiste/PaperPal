@@ -16,3 +16,4 @@ torchao
 requests
 sentence-transformers
 ollama
+docling
