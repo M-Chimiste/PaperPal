@@ -4,13 +4,39 @@
         "model_name": "hermes3",
         "model_type": "ollama",
         "max_new_tokens": 1024,
-        "temperature": 0.1
+        "temperature": 0.1,
+        "num_ctx": 4096
     },
     "newsletter_model":
     {
         "model_name": "hermes3",
         "model_type": "ollama",
         "max_new_tokens": 4096,
-        "temperature": 0.1
+        "temperature": 0.1,
+        "num_ctx": 131072
+    },
+    "content_extraction_model":
+    {
+        "model_name": "hermes3",
+        "model_type": "ollama",
+        "max_new_tokens": 4096,
+        "temperature": 0.1,
+        "num_ctx": 131072
+    },
+    "newsletter_draft_model":
+    {
+        "model_name": "hermes3",
+        "model_type": "ollama",
+        "max_new_tokens": 4096,
+        "temperature": 0.1,
+        "num_ctx": 131072
+    },
+    "newsletter_revision_model":
+    {
+        "model_name": "gemini-1.5-flash",
+        "model_type": "gemini",
+        "max_new_tokens": 4096,
+        "temperature": 0.1,
+        "num_ctx": 131072
     }
 }
