@@ -12,7 +12,7 @@ def parse_args():
     parser.add_argument("--n-days", type=int, default=7,
                        help="Number of days to look back for papers")
     
-    parser.add_argument("--top-n", type=int, default=10,
+    parser.add_argument("--top-n", type=int, default=5,
                        help="Number of top papers to return")
     
     parser.add_argument("--use-different-models", action="store_true", default=True,
@@ -56,6 +56,12 @@ def parse_args():
     parser.add_argument("--verbose", action="store_true", default=True,
                        help="Whether to print verbose output")
     
+    parser.add_argument("--start-date", type=str, default=None,
+                       help="Start date for paper retrieval")
+    
+    parser.add_argument("--end-date", type=str, default=None,
+                       help="End date for paper retrieval")
+    
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -77,7 +83,9 @@ if __name__ == "__main__":
         cosine_similarity_threshold=args.cosine_similarity_threshold,
         db_saving=args.db_saving,
         data_path=args.data_path,
-        verbose=args.verbose
+        verbose=args.verbose,
+        start_date=args.start_date,
+        end_date=args.end_date
     )
     
     paperpal.run()

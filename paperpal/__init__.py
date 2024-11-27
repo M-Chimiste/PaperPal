@@ -12,10 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.0.4-beta"
-from .paperpal import *
-from .prompts import *
-from .inference import *
-from .utils import *
-from .communication import *
-from .data_handling import *
+__version__ = "0.0.5"
+from .paperpal import PaperPal
+from .prompt import (research_interests_prompt,
+                     newsletter_prompt,
+                     research_prompt,
+                     RESEARCH_INTERESTS_SYSTEM_PROMPT,
+                     NEWSLETTER_SYSTEM_PROMPT)
+from .llm import (LocalCudaInference, 
+                   AnthropicInference, 
+                   OpenAIInference, 
+                   SentenceTransformerInference, 
+                   OllamaInference)
+from .utils import (cosine_similarity, 
+                    get_n_days_ago, 
+                    TODAY, 
+                    purge_ollama_cache)
+from .communication import construct_email_body, GmailCommunication
+from .data_processing import ProcessData, PaperDatabase, Paper, Newsletter
+from .pdf import parse_pdf_to_markdown, MarkdownParser, ReferencesParser
