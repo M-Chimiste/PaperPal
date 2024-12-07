@@ -301,8 +301,8 @@ class PaperPal:
                 response = self.newsletter_inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT, schema=NewsletterPromptData)
             
             response_json = json_repair.loads(response)
-            # content.append(response_json['draft'])
-            sections.append(response_json['draft'])
+            draft = f"##{row['title']}\n\n{response_json['draft']}"
+            sections.append(draft)
             urls_and_titles.append(f"{row['title']}: {row['url_pdf']}")
         urls_and_titles = "\n".join(urls_and_titles)
         sections = "\n".join(sections)
