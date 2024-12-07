@@ -9,3 +9,4 @@ from .prompts import (research_interests_prompt,
                      SYSTEM_CONTENT_EXTRACTION_SUMMARY,
                      NEWSLETTER_SYSTEM_PROMPT)
 from .prompting import prompt
+from .data_models import ResearchInterestsPromptData, NewsletterPromptData, SummaryPromptData
