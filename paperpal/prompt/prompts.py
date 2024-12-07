@@ -13,6 +13,13 @@ NEWSLETTER_SCHEMA = """
 }
 """
 
+SUMMARY_SCHEMA = """
+{
+    "questions": "string",
+    "content": "string"
+}
+"""
+
 SCRIPT_SCHEMA = """
 [
     {
@@ -55,8 +62,8 @@ Instructions for AI Agent:
 * Offer a balance to Sarah's journalistic approach, bringing in user experience and entrepreneurial considerations.
 * Ensure the dialogue is informative, engaging, and accessible for listeners."""
 
-SYSTEM_CONTENT_EXTRACTION_SUMMARY = """You are an expert AI which helps extract and summarize content from text content. \
-You only respond in JSON format. Here's the json schema you must adhere to:\n<schema>\n{"questions": str, "content": str}\n</schema>."""
+SYSTEM_CONTENT_EXTRACTION_SUMMARY = f"""You are an expert AI which helps extract and summarize content from text content. \
+You only respond in JSON format. Here's the json schema you must adhere to:\n<schema>\n{SUMMARY_SCHEMA}\n</schema>."""
 
 SUMMARY_SYSTEM_PROMPT = """You are an expert summarizing AI. You respond in JSON with the following structure: <schema>{"summary": <summary_text>}</schema>."""
 
