@@ -34,27 +34,34 @@ Avoid discussing time and date as the date of the newsletter will be included in
 
 @prompt
 def newsletter_context_prompt(research_interests, title_abstract_content):
-    """Use the following research paper content and my research interests to write a section of a personalized newsletter about the source material \
-and how it's related to my research interests.
+    """
+Write a section of a personalized newsletter about the provided research paper, 
+considering the given research interests.
 
-Research interests:
+Research Interests: 
 {{research_interests}}
 
-Source material:
+Source Material: 
 {{title_abstract_content}}
 
-Write the newsletter in the provided JSON schema under draft. The draft should be a string.  Do not write any parts of the newsletter other than the section you are working on for that paper.
-Focus on:
+Instructions:
 
-* **Actionable Advice:** Provide specific takeaways that the reader can take to learn more or apply the research presented in the paper.
-* **Personal Reflection:** Include a reflection on the research, such as how it relates to a common challenge or its potential impact. 
-* **Elaboration:** Elaborate on the paper and explain to the reader why this paper is important, how it's exciting. You may write no more than 2 paragraphs or 200 words.
-* **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The section you are writing should be entirely standalone and not have any of these. Do not directly reference my research interests. It's just for context.
-* **Format:** Only write the content of the section. Do not include any other text. Your content should be completely standalone.
+*   **Provide** specific takeaways that the reader can take to learn more or apply the research presented in the paper.
+*   **Include** a reflection on the research, such as how it relates to a common challenge or its potential impact.
+*   **Elaborate** on the paper and explain to the reader why this paper is important and how it is exciting. 
+*   **Write** in a friendly and engaging tone (e.g., "This fascinating study sheds light on..." or "Imagine the possibilities if...")
+*   **Maintain** a concise and focused style.
+*   **Do not** hallucinate or make up information.
+*   **Output** Limit your response to no more than two paragraphs or 200 words.
 
-Write in a friendly and engaging tone.  
-Do not hallucinate or make up information.
-"""
+Constraints:
+
+*   **Do not** include a salutation, signature, sections, headers, bullet points, or numbered lists.
+*   **Do not** use phrases like "firstly", "secondly", etc.
+*   **Do not** directly reference the research interests provided; they are for context only.
+*   **Do not** say "Elaboration", "Actionable Advice", "Personal Reflection", or similar phrases.
+
+    """
     pass
 
 
@@ -72,6 +79,8 @@ The content should be in the following order:
 1. Newsletter Introduction
 2. Newsletter Sections
 
+Make sure that each section doesn't have the same introductory text (i.e. In this fascinating study...). Ensure that there is some variation in the introductory text.
+
 Re-write the complete newsletter in the provided JSON schema under 'draft'.
 Keep the newsletter in markdown format.
 Do not hallucinate or make up information.
@@ -82,8 +91,8 @@ Avoid discussing time and date.
 
 @prompt
 def newsletter_intro_prompt(sections):
-    """You are writing the introduction for a newsletter. Here are the section contents you are going to use to write the introduction:
-SECTION CONTENT:
+    """You are writing the introduction for a newsletter. Below are sections written on research papers. Here is the content you are going to use to write the introduction:
+PAPER CONTENT:
 {% for section in sections %}
 SECTION {{ loop.index }} START
 {{ section }}
@@ -95,8 +104,9 @@ INSTRUCTIONS:
 
 *   **Format:** Address the reader as "Dear Reader" and sign off as "PaperPal". Do not use the section headers / footers that are in the Section Content. \
 This is just context to help you write the introduction.
-*   **Engagement:** Write an engaging introduction that sets the tone for the newsletter and draws the reader in and summarizes the key takeaways for the content in the section content.
-*   **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The introduction should be entirely standalone and not have any of these.
+*   **Engagement:** Write an engaging introduction that sets the tone for the newsletter and draws the reader in and summarizes the key takeaways for the content in the paper content.
+*   **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The introduction should be entirely standalone and not have any of these. Only write based off the information you are provided. \
+Do not reference subjects or disciplines that aren't provided in the paper content.
 Write the complete introduction in the provided JSON schema under 'draft'. 
 Do not hallucinate or make up information.
 Avoid discussing time and date.
