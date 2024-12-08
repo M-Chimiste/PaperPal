@@ -52,7 +52,7 @@ Instructions:
 *   **Write** in a friendly and engaging tone (e.g., "This fascinating study sheds light on..." or "Imagine the possibilities if...")
 *   **Maintain** a concise and focused style.
 *   **Do not** hallucinate or make up information.
-*   **Output** Limit your response to no more than two paragraphs or 200 words.
+*   **Output** Limit your response to no more than 200 words.
 
 Constraints:
 
