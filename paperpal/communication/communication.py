@@ -28,7 +28,7 @@ def construct_email_body(content,
         date_range = start_date
     else:
         date_range = f"{start_date} - {end_date}"
-    body = f"""Greetings!  Here is your digest for the time period {date_range}:
+    body = f"""## PaperPal Newsletter for {date_range}:
 
 {content}
 
