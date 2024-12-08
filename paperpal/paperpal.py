@@ -304,7 +304,9 @@ class PaperPal:
             draft = f"## {row['title']}\n\n{response_json['draft']}"
             sections.append(draft)
             urls_and_titles.append(f"{row['title']}: {row['url_pdf']}")
-        urls_and_titles = "\n".join(urls_and_titles)
+        # Format urls and titles as numbered markdown list
+        urls_and_titles = "\n".join(f"{i+1}. {title}" for i, title in enumerate(urls_and_titles))
+        # urls_and_titles = "\n".join(urls_and_titles)
         sections = "\n".join(sections)
         intro_prompt = newsletter_intro_prompt(sections)
         if not self.use_different_models:
