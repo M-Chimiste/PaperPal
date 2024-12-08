@@ -34,8 +34,7 @@ Avoid discussing time and date as the date of the newsletter will be included in
 
 @prompt
 def newsletter_context_prompt(research_interests, title_abstract_content):
-    """
-Write a section of a personalized newsletter about the provided research paper, 
+    """Write a standalone section of a personalized newsletter about the provided research paper, 
 considering the given research interests.
 
 Research Interests: 
@@ -49,49 +48,79 @@ Instructions:
 *   **Provide** specific takeaways that the reader can take to learn more or apply the research presented in the paper.
 *   **Include** a reflection on the research, such as how it relates to a common challenge or its potential impact.
 *   **Elaborate** on the paper and explain to the reader why this paper is important and how it is exciting. 
-*   **Write** in a friendly and engaging tone (e.g., "This fascinating study sheds light on..." or "Imagine the possibilities if...")
+*   **Write** in a friendly and engaging tone (e.g., "This fascinating study sheds light on..." or "Imagine the possibilities if..." or "This research shows that...")
 *   **Maintain** a concise and focused style.
 *   **Do not** hallucinate or make up information.
 *   **Output** Limit your response to no more than 200 words.
 
 Constraints:
 
-*   **Do not** include a salutation, signature, sections, headers, bullet points, or numbered lists.
+*   **Do not** include a salutation, signature, sections, headers, bullet points, or numbered lists. DO NOT SAY "Dear Reader" or "PaperPal". Only write the section content.
 *   **Do not** use phrases like "firstly", "secondly", etc.
 *   **Do not** directly reference the research interests provided; they are for context only.
 *   **Do not** say "Elaboration", "Actionable Advice", "Personal Reflection", or similar phrases.
 
+Output:
+The section content in markdown format, stored in the JSON schema under 'draft'.
     """
     pass
 
 
+# @prompt
+# def newsletter_final_prompt(content):
+#     """Finalize the newsletter draft using the following pre-written content:
+# CONTENT:
+# {{content}}
+
+# INSTRUCTIONS:
+# Revise the content to ensure that it's clean and doesn't have JSON or other formatting errors.
+# Your output should be identical to the input except for cleaning up the formatting to ensure that it is ready to be sent in an email.  Do not remove any content.
+
+# The content should be in the following order:
+# 1. Newsletter Introduction
+# 2. Newsletter Sections
+
+# Do not create any headers or footers. Do not change any existing headers or the location of any of the existing content in the body of the newsletter.
+
+# Make sure that each section doesn't have the same introductory text (i.e. In this fascinating study...). Ensure that there is some variation in the introductory text.
+
+# Re-write the complete newsletter in the provided JSON schema under 'draft'.
+# Keep the newsletter in markdown format.
+# Do not hallucinate or make up information.
+# Avoid discussing time and date.
+# """
+#     pass
 @prompt
 def newsletter_final_prompt(content):
-    """Finalize the newsletter draft using the following pre-written content:
+    """Finalize the newsletter sections using the following pre-written content:
+
 CONTENT:
 {{content}}
 
 INSTRUCTIONS:
-Revise the content to ensure that it's clean and doesn't have JSON or other formatting errors.
-Your output should be identical to the input except for cleaning up the formatting to ensure that it is ready to be sent in an email.  Do not remove any content.
 
-The content should be in the following order:
-1. Newsletter Introduction
-2. Newsletter Sections
+*   **Clean:** Ensure the content is free of JSON or other formatting errors.
+*   **Preserve:**  Your output should be identical to the input in terms of content, with no additions or removals. 
+*   **Order:** Maintain the existing order of the content.
+*   **Headers:** Do not create or modify any headers or footers.
+*   **Variation:**  Make sure that each section doesn't have the same introductory text (i.e. In this fascinating study...). Ensure that there is some variation in the introductory text.
+*   **Markdown:** Keep the newsletter in Markdown format.
 
-Make sure that each section doesn't have the same introductory text (i.e. In this fascinating study...). Ensure that there is some variation in the introductory text.
+CONSTRAINTS:
 
-Re-write the complete newsletter in the provided JSON schema under 'draft'.
-Keep the newsletter in markdown format.
-Do not hallucinate or make up information.
-Avoid discussing time and date.
-"""
+*   **Do not** hallucinate or make up information.
+*   **Do not** add any salutations, signatures, sections, headers, bullet points, or numbered lists.
+*   **Avoid** discussing time and date.
+
+OUTPUT:
+The finalized newsletter in Markdown format, ready to be sent in an email, stored in the JSON schema under 'draft'."""
     pass
-
 
 @prompt
 def newsletter_intro_prompt(sections):
-    """You are writing the introduction for a newsletter. Below are sections written on research papers. Here is the content you are going to use to write the introduction:
+    """  You are writing the introduction for a newsletter that summarizes research papers. The research papers are all related to AI.
+Use the following sections to craft your introduction:
+
 PAPER CONTENT:
 {% for section in sections %}
 SECTION {{ loop.index }} START
@@ -102,14 +131,22 @@ SECTION {{ loop.index }} END
 
 INSTRUCTIONS:
 
-*   **Format:** Address the reader as "Dear Reader" and sign off as "PaperPal". Do not use the section headers / footers that are in the Section Content. \
-This is just context to help you write the introduction.
-*   **Engagement:** Write an engaging introduction that sets the tone for the newsletter and draws the reader in and summarizes the key takeaways for the content in the paper content.
-*   **Avoid:** Don't say "firstly", "secondly", "thirdly", lastly, etc. The introduction should be entirely standalone and not have any of these. Only write based off the information you are provided. \
-Do not reference subjects or disciplines that aren't provided in the paper content.
-Write the complete introduction in the provided JSON schema under 'draft'. 
-Do not hallucinate or make up information.
-Avoid discussing time and date.
+  *   **Format:**
+      * Begin with "Dear Reader,\n".
+      * Sign off with "\n~PaperPal". 
+      * Write the complete introduction in the provided JSON schema under 'draft'.
+      * Make sure that 
+
+  *   **Content:**
+      * Summarize the key takeaways from each section.
+      * Write an engaging introduction that draws the reader in.
+      * Do not hallucinate or make up information.
+
+  *   **Style:**
+      * Do not use ordinal numbers (e.g., "firstly", "secondly").
+      * Avoid discussing time and date.
+      *  Do not reference the section headers or imply a specific number of sections. 
+  
 """
     pass
 
