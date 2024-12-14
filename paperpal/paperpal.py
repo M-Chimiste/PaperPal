@@ -1,6 +1,7 @@
 # Standard library imports
 import json
 import os
+import random
 import datetime
 # Third-party imports
 from dotenv import load_dotenv
@@ -37,6 +38,12 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", None)
 GMAIL_SENDER_ADDRESS = os.getenv("GMAIL_SENDER_ADDRESS", None)
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", None)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
+
+INTRO_TEXT = ["This fascinating study sheds light on...",
+              "This research shows that...",
+              "This paper explores...",
+              "This research discusses...",
+              "This paper investigates..."]
 
 
 class PaperPal:
@@ -277,8 +284,7 @@ class PaperPal:
         converter = DocumentConverter()
         total_rows = len(top_n_df)
         for i, (_, row) in enumerate(tqdm(top_n_df.iterrows(), total=total_rows, desc="Generating newsletter sections", disable=not self.verbose)):
-            
-           
+            intro_text = random.choice(INTRO_TEXT)
             response = converter.convert(row['url_pdf'])
             markdown = response.document.export_to_markdown()
             messages = [{"role": "user", "content": general_summary_prompt(markdown)}]
@@ -293,7 +299,7 @@ class PaperPal:
                 summarized_paper = response
 
             context = f"Title: {row['title']}\nAbstract: {row['abstract']}\nRationale: {row['rationale']}\nSummary: {summarized_paper}"
-            messages = [{"role": "user", "content": newsletter_context_prompt(self.research_interests, context)}]
+            messages = [{"role": "user", "content": newsletter_context_prompt(self.research_interests, context, intro_text)}]
             
             if not self.use_different_models:
                 response = self.inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT, schema=NewsletterPromptData)
