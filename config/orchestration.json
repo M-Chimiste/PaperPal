@@ -23,18 +23,18 @@
         "temperature": 0.1,
         "num_ctx": 131072
     },
-    "newsletter_draft_model":
+    "newsletter_sections_model":
     {
-        "model_name": "hermes3",
+        "model_name": "qwen2.5:32b",
         "model_type": "ollama",
         "max_new_tokens": 4096,
         "temperature": 0.1,
         "num_ctx": 131072
     },
-    "newsletter_revision_model":
+    "newsletter_intro_model":
     {
-        "model_name": "gemini-1.5-flash",
-        "model_type": "gemini",
+        "model_name": "qwen2.5:32b",
+        "model_type": "ollama",
         "max_new_tokens": 4096,
         "temperature": 0.1,
         "num_ctx": 131072
