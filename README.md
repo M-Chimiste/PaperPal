@@ -4,11 +4,11 @@ PaperPal is a tool for sorting and analyzing research papers based on your perso
 
 ## Key Features
 
-- Integration with various language models (Llama 3.1, OpenAI, Anthropic) for paper summarization and recommendation
-- Support for using different models for different tasks (judging and newsletter generation) based on configuration
+- Integration with various language models (Llama 3.1, OpenAI, Anthropic, Gemini) for paper summarization and recommendation
+- Support for using different models for different tasks (judging, content extraction, newsletter generation) based on configuration
 - Automated paper downloads from Papers with Code
 - Saving outputs to a SQLite database
-- Automated email notifications with research digests
+- Automated email notifications with research digests in Markdown format
 - Customizable research interests
 - Embedding-based paper filtering with configurable similarity thresholds
 
@@ -83,13 +83,13 @@ python run_paperpal.py --n-days 14 --top-n 20 --model-name llama2
 
 ## Using Multiple Models
 
-PaperPal supports the use of multiple models for different tasks such as judging papers and generating newsletters. This is configured via the `config/orchestration.json` file and leveraged by the `PaperPal` class.
+PaperPal supports the use of multiple models for different tasks. This is configured via the `config/orchestration.json` file and leveraged by the `PaperPal` class.
 
-#### 1. **Configure `orchestration.json`**
+#### Configure `orchestration.json`
 
-Define different models for specific tasks in the `config/orchestration.json` file.
+Define different models for specific tasks in the `config/orchestration.json` file:
 
-```json:config/orchestration.json
+```json
 {
     "judge_model": {
         "model_name": "hermes3",
@@ -112,22 +112,46 @@ Define different models for specific tasks in the `config/orchestration.json` fi
         "temperature": 0.1,
         "num_ctx": 131072
     },
-    "newsletter_draft_model": {
-        "model_name": "hermes3",
+    "newsletter_sections_model": {
+        "model_name": "qwen2.5:32b",
         "model_type": "ollama",
         "max_new_tokens": 4096,
         "temperature": 0.1,
         "num_ctx": 131072
     },
-    "newsletter_revision_model": {
-        "model_name": "gemini-1.5-flash",
-        "model_type": "gemini",
+    "newsletter_intro_model": {
+        "model_name": "qwen2.5:32b",
+        "model_type": "ollama",
         "max_new_tokens": 4096,
         "temperature": 0.1,
         "num_ctx": 131072
     }
 }
 ```
+
+Each task can be configured with:
+- `model_name`: The specific model to use
+- `model_type`: The type of model ("ollama", "anthropic", "openai", or "gemini")
+- `max_new_tokens`: Maximum number of tokens to generate
+- `temperature`: Temperature for text generation
+- `num_ctx`: Context window size (optional, mainly for local models)
+
+### Task-Specific Models
+
+PaperPal now supports different models for various tasks:
+
+- **Judge Model**: Evaluates papers against research interests
+- **Newsletter Model**: Generates the overall newsletter structure
+- **Content Extraction Model**: Extracts and summarizes content from papers
+- **Newsletter Sections Model**: Generates individual paper sections
+- **Newsletter Intro Model**: Creates the newsletter introduction
+
+## Email Formatting
+
+PaperPal now supports Markdown formatting in email newsletters:
+- Headers and sections are properly formatted
+- Links are clickable
+- Text styling (bold, italic) is preserved
 
 ## Configuration
 
