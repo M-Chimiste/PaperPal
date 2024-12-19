@@ -22,7 +22,7 @@ PaperPal is a tool for sorting and analyzing research papers based on your perso
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/PaperPal.git
+   git clone https://github.com/M-Chimiste/PaperPal.git
    cd PaperPal
    ```
 
