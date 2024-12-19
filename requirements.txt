@@ -17,3 +17,4 @@ requests
 sentence-transformers
 ollama
 docling
+markdown2
