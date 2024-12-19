@@ -1,7 +1,8 @@
 # Standard library imports
 import json
 import os
-
+import random
+import datetime
 # Third-party imports
 from dotenv import load_dotenv
 import json_repair
@@ -23,6 +24,9 @@ from .prompt import (
     newsletter_context_prompt,
     newsletter_final_prompt,
     newsletter_intro_prompt,
+    SummaryPromptData,
+    ResearchInterestsPromptData,
+    NewsletterPromptData
 )
 from .utils import cosine_similarity, get_n_days_ago, TODAY, purge_ollama_cache
 
@@ -35,12 +39,20 @@ GMAIL_SENDER_ADDRESS = os.getenv("GMAIL_SENDER_ADDRESS", None)
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", None)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 
+INTRO_TEXT = ["This fascinating study sheds light on...",
+              "This research shows that...",
+              "This paper explores...",
+              "This research discusses...",
+              "This paper investigates..."]
+
 
 class PaperPal:
     def __init__(self,
                  research_interests_path="config/research_interests.txt",
                  n_days=7,
                  top_n=5,
+                 start_date=None,
+                 end_date=None,
                  use_different_models=True,
                  model_type="ollama",
                  model_name="hermes3",
@@ -56,6 +68,23 @@ class PaperPal:
                  verbose=True):
         self.verbose = verbose
         self.research_interests_path = research_interests_path
+        if start_date is None and end_date is None:
+            self.start_date = get_n_days_ago(n_days)
+            self.end_date = TODAY
+        else:
+            def try_parse_date(date_str):
+                if not date_str:
+                    return None
+                formats = ["%Y-%m-%d", "%m-%d-%Y"]
+                for fmt in formats:
+                    try:
+                        return datetime.strptime(date_str, fmt).date()
+                    except ValueError:
+                        continue
+                raise ValueError("Dates must be in YYYY-MM-DD or MM-DD-YYYY format")
+
+            self.start_date = try_parse_date(start_date) or get_n_days_ago(n_days)
+            self.end_date = try_parse_date(end_date) or TODAY
         self.start_date = get_n_days_ago(n_days)
         self.end_date = TODAY
         self.use_different_models = use_different_models
@@ -91,8 +120,8 @@ class PaperPal:
             self.judge_model_config = self.orchestration_config['judge_model']
             self.newsletter_model_config = self.orchestration_config['newsletter_model']
             self.content_extraction_model_config = self.orchestration_config['content_extraction_model']
-            self.newsletter_draft_model_config = self.orchestration_config['newsletter_draft_model']
-            self.newsletter_revision_model_config = self.orchestration_config['newsletter_revision_model']
+            self.newsletter_sections_model_config = self.orchestration_config['newsletter_sections_model']
+            self.newsletter_intro_model_config = self.orchestration_config['newsletter_intro_model']
             self.judge_inference = self._load_inference_model(self.judge_model_config['model_type'],
                                                                 self.judge_model_config['model_name'],
                                                                 self.judge_model_config['max_new_tokens'],
@@ -108,16 +137,16 @@ class PaperPal:
                                                                     self.content_extraction_model_config['max_new_tokens'],
                                                                     self.content_extraction_model_config['temperature'],
                                                                     self.content_extraction_model_config.get('num_ctx', None))
-            self.newsletter_draft_inference = self._load_inference_model(self.newsletter_draft_model_config['model_type'],
-                                                                    self.newsletter_draft_model_config['model_name'],
-                                                                    self.newsletter_draft_model_config['max_new_tokens'],
-                                                                    self.newsletter_draft_model_config['temperature'],
-                                                                    self.newsletter_draft_model_config.get('num_ctx', None))
-            self.newsletter_revision_inference = self._load_inference_model(self.newsletter_revision_model_config['model_type'],
-                                                                    self.newsletter_revision_model_config['model_name'],
-                                                                    self.newsletter_revision_model_config['max_new_tokens'],
-                                                                    self.newsletter_revision_model_config['temperature'],
-                                                                    self.newsletter_revision_model_config.get('num_ctx', None))
+            self.newsletter_sections_inference = self._load_inference_model(self.newsletter_sections_model_config['model_type'],
+                                                                    self.newsletter_sections_model_config['model_name'],
+                                                                    self.newsletter_sections_model_config['max_new_tokens'],
+                                                                    self.newsletter_sections_model_config['temperature'],
+                                                                    self.newsletter_sections_model_config.get('num_ctx', None))
+            self.newsletter_intro_inference = self._load_inference_model(self.newsletter_intro_model_config['model_type'],
+                                                                    self.newsletter_intro_model_config['model_name'],
+                                                                    self.newsletter_intro_model_config['max_new_tokens'],
+                                                                    self.newsletter_intro_model_config['temperature'],
+                                                                    self.newsletter_intro_model_config.get('num_ctx', None))
 
     def _load_inference_model(self, model_type, model_name, max_new_tokens, temperature, num_ctx=None):
         """Load the appropriate inference model based on model type.
@@ -211,9 +240,9 @@ class PaperPal:
         for abstract in tqdm(abstracts, disable=not self.verbose):
             messages = [{"role": "user", "content": research_prompt(self.research_interests, abstract)}]
             if not self.use_different_models:
-                response = self.inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
+                response = self.inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT, schema=ResearchInterestsPromptData)
             else:
-                response = self.judge_inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT)
+                response = self.judge_inference.invoke(messages=messages, system_prompt=RESEARCH_INTERESTS_SYSTEM_PROMPT, schema=ResearchInterestsPromptData)
             response_json = json_repair.loads(response)
             scores.append(int(response_json['score']))
             related.append(bool(response_json['related']))
@@ -255,15 +284,14 @@ class PaperPal:
         converter = DocumentConverter()
         total_rows = len(top_n_df)
         for i, (_, row) in enumerate(tqdm(top_n_df.iterrows(), total=total_rows, desc="Generating newsletter sections", disable=not self.verbose)):
-            
-           
+            intro_text = random.choice(INTRO_TEXT)
             response = converter.convert(row['url_pdf'])
             markdown = response.document.export_to_markdown()
             messages = [{"role": "user", "content": general_summary_prompt(markdown)}]
             if not self.use_different_models:
-                response = self.inference.invoke(messages=messages, system_prompt=SYSTEM_CONTENT_EXTRACTION_SUMMARY)
+                response = self.inference.invoke(messages=messages, system_prompt=SYSTEM_CONTENT_EXTRACTION_SUMMARY, schema=SummaryPromptData)
             else:
-                response = self.content_extraction_inference.invoke(messages=messages, system_prompt=SYSTEM_CONTENT_EXTRACTION_SUMMARY)
+                response = self.content_extraction_inference.invoke(messages=messages, system_prompt=SYSTEM_CONTENT_EXTRACTION_SUMMARY, schema=SummaryPromptData)
             response_json = json_repair.loads(response)
             try:
                 summarized_paper = response_json['content']
@@ -271,24 +299,25 @@ class PaperPal:
                 summarized_paper = response
 
             context = f"Title: {row['title']}\nAbstract: {row['abstract']}\nRationale: {row['rationale']}\nSummary: {summarized_paper}"
-            messages = [{"role": "user", "content": newsletter_context_prompt(self.research_interests, context)}]
+            messages = [{"role": "user", "content": newsletter_context_prompt(self.research_interests, context, intro_text)}]
             
             if not self.use_different_models:
-                response = self.inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+                response = self.inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT, schema=NewsletterPromptData)
             else:
-                response = self.newsletter_inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+                response = self.newsletter_sections_inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT, schema=NewsletterPromptData)
             
             response_json = json_repair.loads(response)
-            # content.append(response_json['draft'])
-            sections.append(response_json['draft'])
+            draft = f"## {row['title']}\n\n{response_json['draft']}"
+            sections.append(draft)
             urls_and_titles.append(f"{row['title']}: {row['url_pdf']}")
-        urls_and_titles = "\n".join(urls_and_titles)
+        # Format urls and titles as numbered markdown list
+        urls_and_titles = "\n".join(f"{i+1}. {title}" for i, title in enumerate(urls_and_titles))
         sections = "\n".join(sections)
         intro_prompt = newsletter_intro_prompt(sections)
         if not self.use_different_models:
-            newsletter_intro = self.inference.invoke(messages=[{"role": "user", "content": intro_prompt}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+            newsletter_intro = self.inference.invoke(messages=[{"role": "user", "content": intro_prompt}], system_prompt=NEWSLETTER_SYSTEM_PROMPT, schema=NewsletterPromptData)
         else:
-            newsletter_intro = self.newsletter_draft_inference.invoke(messages=[{"role": "user", "content": intro_prompt}], system_prompt=NEWSLETTER_SYSTEM_PROMPT)
+            newsletter_intro = self.newsletter_intro_inference.invoke(messages=[{"role": "user", "content": intro_prompt}], system_prompt=NEWSLETTER_SYSTEM_PROMPT, schema=NewsletterPromptData)
         try:
             newsletter_intro_json = json_repair.loads(newsletter_intro)
             newsletter_intro = newsletter_intro_json['draft']
@@ -296,14 +325,6 @@ class PaperPal:
             newsletter_intro = newsletter_intro
         
         newsletter_content = f"{newsletter_intro}\n{sections}"
-        messages = [{"role": "user", "content": newsletter_final_prompt(newsletter_content)}]
-        if not self.use_different_models:
-            newsletter_final = self.inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT)
-        else:
-            newsletter_final = self.newsletter_revision_inference.invoke(messages=messages, system_prompt=NEWSLETTER_SYSTEM_PROMPT)
-       
-        newsletter_final_json = json_repair.loads(newsletter_final)
-        newsletter_content = newsletter_final_json['draft']
         
         newsletter = Newsletter(
             content=newsletter_content,

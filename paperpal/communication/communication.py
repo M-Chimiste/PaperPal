@@ -17,6 +17,7 @@ import smtplib
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import markdown2
 
 
 def construct_email_body(content,
@@ -27,11 +28,11 @@ def construct_email_body(content,
         date_range = start_date
     else:
         date_range = f"{start_date} - {end_date}"
-    body = f"""Greetings!  Here is your digest for the time period {date_range}:
+    body = f"""## PaperPal Newsletter for {date_range}:
 
 {content}
 
-References:
+##References:
 {urls_and_titles}
 """
     return body
@@ -60,7 +61,7 @@ class GmailCommunication:
         """Method to compose a MIMEMultipart Message
 
         Args:
-            content (str): string email content for generating an email from.
+            content (str): markdown formatted string content for generating an email
         """
         sender_address = self.sender_address
         receiver_address = self.receiver_address
@@ -83,11 +84,20 @@ class GmailCommunication:
         if not receiver_address:  # we send the email to ourselves if we aren't sending it to someone else.
             receiver_address = sender_address
         
-        message = MIMEMultipart()
+        message = MIMEMultipart('alternative')
         message["From"] = sender_address
         message["To"] = receiver_address
         message['Subject'] = f"PaperPal Paper Newsletter for {date_range}"
-        message.attach(MIMEText(content, 'plain'))
+        
+        # Create both plain text and HTML versions
+        text_part = MIMEText(content, 'plain')
+        html_content = markdown2.markdown(content)
+        html_part = MIMEText(html_content, 'html')
+        
+        # Attach both versions - the email client will use the last attached version it can handle
+        message.attach(text_part)
+        message.attach(html_part)
+        
         self.email_message = message
     
 
