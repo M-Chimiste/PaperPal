@@ -250,6 +250,7 @@ class SpacyLayoutDocProcessor:
         
         if table_format not in ['csv', 'html', 'md']:
             raise ValueError("table_format must be either 'csv', 'html', or 'md'")
+        self.table_format = table_format
         self.verbose = verbose
         self.export_tables = export_tables
         self.export_figures = export_figures
