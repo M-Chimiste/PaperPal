@@ -327,7 +327,7 @@ class SpacyLayoutDocProcessor:
         base_path = self.output_dir or "output"
         filename = os.path.basename(doc_path)
         foldername = filename.split('.')[0]
-        output_dir = '{base_path}/{foldername}'
+        output_dir = f'{base_path}/{foldername}'
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         return output_dir
 
