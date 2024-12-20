@@ -241,8 +241,8 @@ class SpacyLayoutDocProcessor:
                 language="en",
                 table_format='csv',
                 verbose=False,
-                export_tables=True, 
-                export_figures=True,
+                do_export_tables=True, 
+                do_export_figures=True,
                 save_text=False,
                 image_resolution_scale=2.0,
                 output_dir=None,
@@ -263,7 +263,7 @@ class SpacyLayoutDocProcessor:
             self.pipeline_options = PdfPipelineOptions()
             self.pipeline_options.generate_picture_images = True
             self.pipeline_options.images_scale = image_resolution_scale
-            self.docling_converter = self.converter = DocumentConverter(
+            self.docling_converter = DocumentConverter(
             allowed_formats=[
                 InputFormat.PDF,
                 InputFormat.IMAGE,
@@ -299,7 +299,7 @@ class SpacyLayoutDocProcessor:
             with open(f"{output_dir}/text.md", "w") as f:
                 f.write(markdown_data)
         if self.export_tables:
-            tables = self.export_tables(output_dir, processed_doc)
+            tables = self.export_tables_method(output_dir, processed_doc)
         else:
             tables = None
 
@@ -347,7 +347,7 @@ class SpacyLayoutDocProcessor:
         return data
     
 
-    def export_tables(self, output_dir, document):
+    def export_tables_method(self, output_dir, document):
         """
         Exports tables from a document to the specified output directory in the specified format.
         Args:
