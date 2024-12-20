@@ -18,3 +18,5 @@ sentence-transformers
 ollama
 docling
 markdown2
+spacy
+spacy-layout
