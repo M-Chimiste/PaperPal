@@ -37,16 +37,22 @@ def _env_flag(name: str, default: bool) -> bool:
     return raw_value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+# Inline reasoning delimiters emitted by various local models when the runtime
+# doesn't separate reasoning into a dedicated response field.
+_THINK_TAGS = ("think", "thinking", "reason", "reasoning")
+
+
 def _strip_think_blocks(text: str) -> str:
-    """Remove Qwen-style <think>...</think> blocks from model output."""
+    """Remove inline reasoning blocks (e.g. <think>...</think>) from model output."""
     if not text:
         return text
 
-    cleaned = re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL | re.IGNORECASE)
-
-    # Handle partially malformed outputs that open a think block but never close it.
-    if "<think>" in cleaned.lower():
-        cleaned = re.sub(r"<think>.*$", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = text
+    for tag in _THINK_TAGS:
+        cleaned = re.sub(rf"<{tag}>.*?</{tag}>\s*", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
+        # Handle partially malformed output that opens a block but never closes it.
+        if f"<{tag}>" in cleaned.lower():
+            cleaned = re.sub(rf"<{tag}>.*$", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
 
     return cleaned.strip()
 
@@ -66,7 +72,7 @@ class TheseusLMStudioInference(LMStudioInference):
         request_timeout_sec: Optional[float] = None,
         **kwargs,
     ):
-        # Default to disabling Qwen thinking on LM Studio unless explicitly opted out.
+        # Default to disabling model thinking on LM Studio unless explicitly opted out.
         self.disable_thinking = (
             _env_flag("LMSTUDIO_DISABLE_THINKING", True)
             if disable_thinking is None else bool(disable_thinking)
@@ -100,13 +106,24 @@ class TheseusLMStudioInference(LMStudioInference):
         return patched_messages
 
     def _build_disable_thinking_extra_body(self, extra_body: Optional[dict] = None) -> dict:
-        """Add LM Studio/Qwen chat-template kwargs to disable thinking."""
+        """Merge the LM Studio request-body switches that disable model thinking.
+
+        Several keys are sent because different model templates honor different
+        ones, and any a model doesn't recognize is ignored:
+          - ``reasoning_effort: "none"`` — LM Studio's switch for reasoning models
+            (e.g. Gemma) so they don't spend the token budget thinking.
+          - ``enable_thinking: False`` (+ ``chat_template_kwargs``) — the
+            Qwen-style chat-template flag.
+
+        Caller-provided values take precedence so an explicit override wins.
+        """
         merged_extra_body = dict(extra_body or {})
         chat_template_kwargs = dict(merged_extra_body.get("chat_template_kwargs") or {})
-        chat_template_kwargs["enable_thinking"] = False
+        chat_template_kwargs.setdefault("enable_thinking", False)
         merged_extra_body["chat_template_kwargs"] = chat_template_kwargs
-        # Also include the plain key for clients/runtimes that read it directly.
-        merged_extra_body["enable_thinking"] = False
+        # Also include the plain keys for clients/runtimes that read them directly.
+        merged_extra_body.setdefault("enable_thinking", False)
+        merged_extra_body.setdefault("reasoning_effort", "none")
         return merged_extra_body
 
     def _load_model(self):
@@ -128,11 +145,38 @@ class TheseusLMStudioInference(LMStudioInference):
             trust_env=False,
             timeout=None if self.request_timeout_sec is None else self.request_timeout_sec,
         )
-        return OpenAI(
+        client = OpenAI(
             base_url=f"{self.base_url}/v1",
             api_key=self.api_key,
             http_client=http_client,
         )
+
+        if self.disable_thinking:
+            self._install_disable_thinking_hook(client)
+
+        return client
+
+    def _install_disable_thinking_hook(self, client: OpenAI) -> None:
+        """Force the disable-thinking switches onto every chat completion request.
+
+        Upstream ``LMStudioInference.invoke`` builds the request from a fixed
+        kwarg allowlist and discards ``extra_body``, so the client is the only
+        reliable place to inject ``reasoning_effort: "none"``. Wrapping
+        ``chat.completions.create`` here keeps all of upstream's retry/streaming
+        behavior intact while disabling thinking regardless of model family.
+        The explicit-thinking path (``use_thinking=True``) uses LM Studio's
+        ``/v1/responses`` endpoint directly and is unaffected by this hook.
+        """
+        completions = client.chat.completions
+        original_create = completions.create
+
+        def create_with_thinking_disabled(*args, **kwargs):
+            kwargs["extra_body"] = self._build_disable_thinking_extra_body(
+                kwargs.get("extra_body")
+            )
+            return original_create(*args, **kwargs)
+
+        completions.create = create_with_thinking_disabled
 
     def invoke(
         self,
@@ -148,66 +192,21 @@ class TheseusLMStudioInference(LMStudioInference):
         **kwargs,
     ):
         resolved_model_name = model_name or self.model_name
-        if self.disable_thinking and self._is_qwen_model(resolved_model_name):
+
+        # The disable-thinking request switches (reasoning_effort etc.) are
+        # injected at the client level in _install_disable_thinking_hook; here we
+        # only force use_thinking off and, for Qwen chat templates, add the inline
+        # /no_think directive. The request still flows through upstream invoke()
+        # so its model-reload retry logic is preserved.
+        if self.disable_thinking:
             if use_thinking:
                 logger.info(
-                    "Overriding use_thinking for LM Studio Qwen model '%s' because LMSTUDIO_DISABLE_THINKING is enabled",
+                    "Overriding use_thinking for LM Studio model '%s' because thinking is disabled",
                     resolved_model_name,
                 )
             use_thinking = False
-            messages = self._apply_no_think_directive(messages)
-            if not images and not return_thinking:
-                full_messages = [{"role": "system", "content": system_prompt}] + messages
-                completion_params = {
-                    "model": resolved_model_name,
-                    "messages": full_messages,
-                    "max_tokens": kwargs.get("max_tokens", self.max_new_tokens),
-                    "temperature": kwargs.get("temperature", self.temperature),
-                    "extra_body": self._build_disable_thinking_extra_body(kwargs.get("extra_body")),
-                }
-
-                if "top_p" in kwargs:
-                    completion_params["top_p"] = kwargs["top_p"]
-                if "top_k" in kwargs:
-                    completion_params["top_k"] = kwargs["top_k"]
-                if "stop" in kwargs:
-                    completion_params["stop"] = kwargs["stop"]
-                if "presence_penalty" in kwargs:
-                    completion_params["presence_penalty"] = kwargs["presence_penalty"]
-                if "frequency_penalty" in kwargs:
-                    completion_params["frequency_penalty"] = kwargs["frequency_penalty"]
-                if "seed" in kwargs:
-                    completion_params["seed"] = kwargs["seed"]
-
-                if schema:
-                    completion_params["response_format"] = {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": schema.__name__,
-                            "schema": schema.model_json_schema(),
-                        },
-                    }
-
-                if streaming:
-                    completion_params["stream"] = True
-                    stream = self.client.chat.completions.create(**completion_params)
-
-                    def _gen():
-                        for chunk in stream:
-                            if chunk.choices and chunk.choices[0].delta.content:
-                                yield _strip_think_blocks(chunk.choices[0].delta.content)
-
-                    return _gen()
-
-                response = self.client.chat.completions.create(**completion_params)
-                raw_content = response.choices[0].message.content or ""
-                cleaned_response = _strip_think_blocks(raw_content)
-                if cleaned_response != raw_content:
-                    logger.info(
-                        "Stripped think tags from LM Studio Qwen response for model '%s'",
-                        resolved_model_name,
-                    )
-                return cleaned_response
+            if self._is_qwen_model(resolved_model_name):
+                messages = self._apply_no_think_directive(messages)
 
         response = super().invoke(
             messages=messages,
@@ -221,15 +220,15 @@ class TheseusLMStudioInference(LMStudioInference):
             **kwargs,
         )
 
-        if (
-            self.disable_thinking
-            and self._is_qwen_model(resolved_model_name)
-            and isinstance(response, str)
-        ):
+        # Safety net: strip any inline reasoning the runtime didn't separate into
+        # a dedicated field (applies to plain string responses only).
+        if self.disable_thinking and isinstance(response, str):
             cleaned_response = _strip_think_blocks(response)
-            if cleaned_response != response:
+            if cleaned_response != response and any(
+                f"<{tag}>" in response.lower() for tag in _THINK_TAGS
+            ):
                 logger.info(
-                    "Stripped think tags from LM Studio Qwen response for model '%s'",
+                    "Stripped inline reasoning from LM Studio response for model '%s'",
                     resolved_model_name,
                 )
             return cleaned_response
