@@ -6,6 +6,68 @@
 
 ## Recent Changes
 
+### Matching numbered paper and source headings (2026-09-07)
+
+Updated paper titles to “1. Title”, “2. Title”, etc., and applied identical numbered headings in the source appendix. Refreshed the five-paper HTML/Markdown draft; preserved existing citation labels and named anchors. Verified that all five summary headings match their source headings and every reference target resolves. All 19 newsletter tests and diff whitespace checks pass. No email was sent. Next: use this numbering for future generation and personal test sends.
+
+### Title-only newsletter section headers (2026-09-07)
+
+Removed the visible “Paper P1”, “Paper P2”, etc. labels above paper titles in shared newsletter assembly. Updated the current five-paper HTML/Markdown draft and retained the prior layout. Citation labels, named anchors, and grouped source notes remain intact. Verified title-only headers, reference targets, all 19 newsletter unit tests, and diff whitespace checks. No email was sent for this layout change. Next: use the updated layout in subsequent previews and sends.
+
+### Corrected personal email test v2 (2026-09-07)
+
+At the user's explicit request, sent the corrected HTML draft to christian.j.merrill@gmail.com only, with no CC, BCC, group recipients, or extra sender copy. Subject: Theseus Insight — corrected draft test v2. SMTP accepted the message; the receipt and exact HTML hash are recorded in data/evaluation/five-paper-local/personal-email-test-v2-receipt.json. Includes fixed character escaping, named anchors, and the new full-issue prose summary. Next: user verifies inbox rendering and reference jumps.
+
+### Email rendering and issue-summary corrections (2026-09-07)
+
+**Implemented:** Fixed literal apostrophe entities caused by Markdown-escaping the hash in HTML entities; text now escapes Markdown before HTML and leaves quotes intact in text nodes. Added `name` alongside `id` for email citation/return targets, plus visible paper-specific labels (P1·E1) for clients without local-anchor support. Replaced bullet preambles with validated, connected prose summaries covering every included paper; the extractive fallback now covers all papers too. Summary prompts preserve measurement provenance and avoid unsupported cross-paper claims.
+
+**Verification/debug log:** Added regression checks for apostrophes, ampersands, safe HTML escaping, named-anchor resolution, complete summary coverage, and prose fallback. Local Gemma generated and reviewed a new preamble with a test-only temperature of 0.3. The screenshot exposed an actual Gmail-client limitation missed by the prior browser-ID structural check; named-anchor compatibility is based on published client tests, not a claim of inbox verification. No new email has been sent in this correction session.
+
+**Final checks:** All 28 unit tests pass. The regenerated five-paper draft has 77 references resolving to unique named targets, readable apostrophes, and a locally reviewed 165-word preamble covering all papers. Previous email-test files are preserved under newsletter-before-email-fixes.*; no correction email was sent.
+
+**Next:** Verify named jumps in the user's actual email client; mobile Gmail may still ignore internal anchors. Standalone HTML and paper-specific labels provide navigation alternatives without hosting or publishing private content.
+
+### Personal newsletter email test (2026-09-07)
+
+Sent the current five-paper draft, including the source appendix and linked citations, to the user's explicitly requested personal address only. SMTP accepted the message; no CC, BCC, group recipients, or additional sender copy were included. Used the existing repository credentials without exposing or changing them. A local receipt records recipient, subject, message ID, HTML hash, and server acceptance in data/evaluation/five-paper-local/personal-email-test-receipt.json. Next: user checks actual inbox rendering and anchor navigation in their email client.
+
+### Newsletter layout and source appendix (2026-09-07)
+
+**Implemented:** Reordered briefs to What Changed, Why it matters, Evidence, and Caveat. Moved source notes into one appendix grouped by paper. Added unique paper-scoped citation anchors and return links. Production assembly and local evaluation now share the same renderer; refreshed the existing five-paper HTML/Markdown draft without inference, email, or database writes. Preserved the previous layout alongside it.
+
+**Verification/debug log:** Newsletter tests pass 17/17, including two papers with identical E1 evidence IDs resolving to distinct notes, field ordering, appendix grouping, return links, and preserved external paper URLs. Programmatic checks of the actual five-paper HTML confirm every internal link resolves, all anchor IDs are unique, and there are five paper groups in the appendix. `git diff --check` passes.
+
+**Next:** Internal anchors are supported in the standalone HTML; navigation in other Markdown renderers or email clients depends on preservation of HTML anchors. Continue the evidence/reviewer calibration work recorded below.
+
+### Local newsletter evidence and editorial quality (2026-09-07)
+
+**Implemented:**
+- Replaced the character-loop introduction path with synthesis over complete, validated paper briefs. Intro support is checked locally; rejected synthesis uses faithful contribution excerpts.
+- Added strict evidence, brief, editorial-score, and review schemas for local providers. Extracted quotations must match original source chunks; IDs link draft fields to evidence. Review must cover every field, preserve qualifications, and reject unsupported claims.
+- Added per-paper evidence/brief checkpoints, bounded requests, one content retry and one support revision, candidate replacement, and explicit failure when every paper fails quality checks. No arbitrary raw-response fallback remains in the newsletter path.
+- Added an editorial shortlist pass, topic/title diversity penalties, canonical arXiv deduplication, and profile-scoped recent coverage. Fixed download completion order affecting selection and removed the profile fallback's latest-100-paper restriction.
+- Added featured/brief word budgets, concrete findings and caveats, paper links and source excerpts. Removed forced promotional openings from the active generation path.
+- Migration 018 persists complete edition evidence/provenance and coverage metadata atomically with newsletter content, idempotently by task ID. Recovery after a content checkpoint still persists the edition.
+- Added a draft-only evaluation CLI: read-only snapshot, local generation with temporary temperature overrides, fixed-input checks, blind Markdown variants, and human ratings with explicit missing-data coverage. Added a synthetic fixture, usage guide, and README link.
+- Restored styled local previews: shared the existing email HTML/CSS through a pure renderer, added horizontal section dividers to production/evaluation Markdown, and wrote HTML alongside evaluation drafts. Rendering never creates an email client.
+
+**Verification/debug log:**
+- Full `make check` passed with 22 Python unit tests, 68 backend integration tests, 13 frontend tests, lint baseline, API/type consistency, frontend production build, and dependency-lock checks. Existing frontend chunk-size and Starlette deprecation warnings remain.
+- Disposable Docker startup/restart validation passed with the new migration. No production database migration was run during this work. The disposable PostgreSQL test cluster was stopped after verification.
+- A draft-only live-model check uses synthetic text and the existing local Gemma model on the configured LM Studio host. Initial long output limits prompted smaller request-local budgets; shared clients and saved model configuration remain unchanged. The full extraction-to-draft attempt was rejected after validation/support retries, with no issue produced. An isolated Gemma writing-and-review check using manually anchored synthetic evidence subsequently passed; the local Markdown sample is in data/evaluation/newsletter-local-draft.md. This is not an end-to-end success claim for real papers. Added more specific validation diagnostics and aligned evaluation/production intro fallback behavior.
+- No email was sent or queued. Evaluation does not instantiate the newsletter pipeline, invoke communication code, or write to the application database.
+- The subsequent complete synthetic run at evaluation-only temperature 0.3 passed extraction, brief validation, source review, introduction, and intro review without fallback or retries. It took approximately 9m52s on the current local server. The inspected draft is data/evaluation/newsletter-full-local-draft.md; source evidence and raw diagnostic responses are retained alongside it. This validates compatibility on one synthetic input, not real-paper quality or typical throughput. Saved temperature/model settings were not changed.
+- Started the requested real-PDF, five-paper draft test from the active profile's stored 10/10 papers, using a read-only database connection and local Gemma at evaluation-only temperature 0.3. Retained PDF/source/evidence/response checkpoints under data/evaluation/five-paper-local. Initial failures exposed altered quotation spacing and duplicated words; tightened extraction instructions and made retries identify the exact rejected quote without relaxing exact-source validation. Formatting and newsletter unit tests now pass 14/14.
+- Real-PDF follow-up: made quote rejection granular. Retry non-verbatim claims once, exclude any that still fail, retain independently anchored claims, and persist `discarded_quotes` for audit. Unsupported problem/contribution still fails the paper; writing/support gates remain unchanged. A mixed-valid/fabricated regression test verifies exclusion and audit retention; focused newsletter tests pass 15/15.
+- Completed the requested five-paper local test: all five selected papers have stored scores of 10/10; downloaded and parsed 51 source chunks, retained 407 quote-anchored evidence claims, and excluded 32 non-verbatim quotes after retries. Two candidates were filtered for relevance and one failed summary support review. Output: data/evaluation/five-paper-local/newsletter.html, newsletter.md, newsletter.json, and test-manifest.json. Original automatic output remains in newsletter-automatic.*. No email or production database writes occurred.
+- Editorial spot-check found scope/baseline overstatements that the local reviewer missed. Added optional editorial feedback to local brief generation, re-generated three summaries locally, and used focused verified evidence for two. The final model-generated intro falsely characterized Möbius RoPE as a long-context improvement; rejected it during editorial review and used the shared contribution-excerpt fallback. Final output is an editorially checked local-model draft, not an unassisted quality-pass claim. Retained originals, feedback, discarded quotations, PDFs, and source text for comparison. All 25 unit tests and diff whitespace checks pass.
+
+**Next:**
+- Restart the local app normally to apply migration 018, then start a new newsletter run; prompt fingerprint changes intentionally prevent mixing old checkpoints with the new pipeline.
+- Use representative real issues for blind human comparison. Passing source checks and a synthetic fixture does not establish improved real-world factual quality.
+- Tighten evidence-level claim entailment and baseline/scope handling; the real test exposed both overly conservative reviewer rejections and missed overstatements. Reduce redundant citations and evaluate local reviewer calibration before treating model approval as sufficient for unattended delivery.
+
 ### Repository reliability, retrieval, and local verification (2026-09-07)
 
 **Implemented:**

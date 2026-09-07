@@ -963,3 +963,5 @@ Theseus Insight is maintained by [M. Chimiste](https://github.com/M-Chimiste) & 
 ## Reliability and local verification
 
 See [the reliability guide](docs/reliability.md) for locked installation, the local quality gate, credential migration, authenticated access, job recovery, diagnostics, and search/evaluation commands. No GitHub workflows are required.
+
+See [newsletter quality](docs/newsletter-quality.md) for local-model evidence extraction, editorial selection, source checks, and draft-only evaluation that never sends email.

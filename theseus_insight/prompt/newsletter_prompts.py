@@ -156,11 +156,10 @@ Based on the content below delimited by <> please determine and output the follo
 3. Provide a score between 1-10 with the following rubric:
 
 Score 1-2: This research has no relevance to my research interests by topic or domain.
-Score 3-4: This research has no relevance to my research insterests but might be of a similar domain.
-Score 4-5: This research has relevance to at least one of my research interests.
-Score 5-6: This research has relevance to more than one of my research interests.
-Score 7-8: This research has relevance to all of my research interests or has relevance to more than one research interests but has a potentially ground breaking impact on the field.
-Score 9-10: This research has relevance to all of my research interests and has a potentially ground breaking impact on the field.
+Score 3-4: This research is in an adjacent domain but has no concrete connection to a stated interest.
+Score 5-6: This research has a concrete connection to at least one interest, but its usefulness or supporting evidence is limited.
+Score 7-8: This research directly addresses at least one specific research interest with a concrete, useful contribution.
+Score 9-10: This research strongly addresses at least one specific research interest and provides compelling, relevant evidence. Do not require matching all interests or reward promotional claims.
 
 <{{text}}>
 """

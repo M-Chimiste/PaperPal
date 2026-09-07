@@ -138,7 +138,7 @@ def rank_papers_with_historical_scores(ti, data_df, return_all_scored=False, pro
         combined_df = combined_df.sort_values(by='score', ascending=False)
 
         # Get more papers than needed to allow for PDF conversion failures
-        backup_multiplier = 2
+        backup_multiplier = 4
         extended_count = min(len(combined_df), ti.top_n * backup_multiplier)
         top_n_df = combined_df.head(extended_count)
 
@@ -296,7 +296,7 @@ async def rank_papers_multi_server(ti, data_df):
     data_df = data_df.sort_values(by='score', ascending=False)
 
     # Get more papers than needed to allow for PDF conversion failures
-    backup_multiplier = 2
+    backup_multiplier = 4
     extended_count = min(len(data_df), ti.top_n * backup_multiplier)
     top_n_df = data_df.head(extended_count)
 
@@ -552,7 +552,7 @@ def rank_papers_single_server(ti, data_df, progress_callback=None):
 
         # Get more papers than needed to allow for PDF conversion failures
         # We'll take 2x the requested amount as backup
-        backup_multiplier = 2
+        backup_multiplier = 4
         extended_count = min(len(data_df), ti.top_n * backup_multiplier)
         top_n_df = data_df.head(extended_count)
 

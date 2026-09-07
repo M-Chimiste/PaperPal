@@ -11,6 +11,32 @@ class NewsletterRepository:
     """CRUD for `newsletters` table."""
 
     @staticmethod
+    def recent_paper_keys(profile_ids=None):
+        with get_cursor() as cur:
+            cur.execute("""SELECT paper_keys FROM newsletter_editions
+                WHERE created_at >= now() - interval '30 days'
+                  AND ((%s::int[] = '{}' AND profile_ids = '{}') OR profile_ids && %s::int[])
+                ORDER BY created_at DESC LIMIT 30""", (profile_ids or [], profile_ids or []))
+            return {key for row in cur.fetchall() for key in row['paper_keys']}
+
+    @staticmethod
+    def save_edition(task_id, content, start_date, end_date, profile_ids, artifact):
+        """Atomic, idempotent issue persistence with its evidence and coverage record."""
+        import json
+        with get_cursor() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", ('edition:' + task_id,))
+            cur.execute('SELECT newsletter_id FROM newsletter_editions WHERE task_id=%s', (task_id,))
+            existing = cur.fetchone()
+            if existing:
+                return existing['newsletter_id']
+            cur.execute('INSERT INTO newsletters(content,start_date,end_date,date_sent) VALUES(%s,%s,%s,CURRENT_DATE) RETURNING id',
+                        (content, start_date, end_date))
+            ident = cur.fetchone()['id']
+            cur.execute('INSERT INTO newsletter_editions(task_id,newsletter_id,profile_ids,paper_keys,artifact) VALUES(%s,%s,%s,%s,%s)',
+                        (task_id, ident, profile_ids or [], [p['key'] for p in artifact.get('papers', [])], json.dumps(artifact)))
+            return ident
+
+    @staticmethod
     def insert(newsletter: Any) -> int:
         with get_cursor() as cur:
             cur.execute(
@@ -329,4 +355,4 @@ class NewsletterJobRepository:
                 LIMIT %s
             """, (limit,))
 
-            return [NewsletterJob.from_dict(dict(row)) for row in cursor.fetchall()] 
+            return [NewsletterJob.from_dict(dict(row)) for row in cursor.fetchall()]

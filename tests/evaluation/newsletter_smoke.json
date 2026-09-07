@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "research_interests": "Efficient local agent planning and evidence-based evaluation",
+  "papers": [
+    {
+      "key": "synthetic-validation",
+      "title": "Synthetic validation study: duplicate-aware search",
+      "url": "https://example.invalid/synthetic-validation",
+      "evidence": {
+        "sources": [
+          {
+            "source_id": "S1",
+            "text": "# Synthetic validation study: duplicate-aware search\nThis is a synthetic source for testing newsletter software, not a real research publication.\n\n## Problem\nA search planner repeatedly explores identical candidate states. This repetition can waste a fixed exploration budget. The experiment tests whether grouping identical states reduces redundant expansion while preserving success on a small controlled benchmark.\n\n## Method\nThe proposed planner hashes normalized state descriptions and expands each distinct state once. The baseline expands every candidate, including duplicates. Both planners use the same task inputs and the same maximum expansion budget of 100 states per task. No language model is trained or fine-tuned by this procedure.\n\n## Results\nOn 40 synthetic planning tasks, the baseline performed 80 expansions per task on average and solved 30 tasks. The duplicate-aware planner performed 50 expansions per task on average and also solved 30 tasks. This is a reduction in average expansions from 80 to 50, with unchanged observed task success on this benchmark. Wall-clock latency and memory usage were not measured. These results do not establish a latency or memory improvement.\n\n## Limitations\nThe evaluation covers only synthetic tasks with exact duplicate states. It does not test semantically similar states, real-world agent tasks, or noisy observations. No statistical significance test was performed. Generalization to real-world agent workloads remains untested.\n"
+          }
+        ]
+      }
+    }
+  ]
+}

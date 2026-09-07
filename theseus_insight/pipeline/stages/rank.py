@@ -81,7 +81,7 @@ async def run(
                             df = df.sort_values('date', ascending=False)
 
                         # Get more papers than needed to allow for PDF conversion failures
-                        backup_multiplier = 2
+                        backup_multiplier = 4
                         extended_count = min(len(df), ti.top_n * backup_multiplier)
                         top_n_df = df.head(extended_count)
 

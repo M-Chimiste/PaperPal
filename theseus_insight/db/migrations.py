@@ -58,6 +58,7 @@ class MigrationRunner:
             (15, "015_profile_star_map.sql", "Add cached star map points per profile"),
             (16, "016_profile_star_map_3d.sql", "Add Z coordinate for 3D star map"),
             (17, "017_runtime_reliability.sql", "Durable dispatch, delivery receipts, diagnostics and search index"),
+            (18, "018_newsletter_quality.sql", "Newsletter evidence artifacts and coverage history"),
         ]
     
     def _get_file_checksum(self, filepath: pathlib.Path) -> str:

@@ -152,7 +152,7 @@ def get_and_score_profile_papers(
             df = pd.DataFrame(papers_list)
         else:
             # Fall back to database query (existing logic)
-            # Get papers from database in date range (up to 100 to ensure we have enough to score)
+            # Get papers from database in date range (all candidates in the requested date window)
             papers_data = []
             with get_cursor() as cur:
                 # First, let's check what date range we have in the database
@@ -166,10 +166,9 @@ def get_and_score_profile_papers(
                     print(f"   Date range: {date_info['min_date']} to {date_info['max_date']}")
 
                 cur.execute("""
-                    SELECT * FROM papers 
+                    SELECT id, title, abstract, url, date FROM papers
                     WHERE date >= %s AND date <= %s
-                    ORDER BY date DESC 
-                    LIMIT 100
+                    ORDER BY date DESC, id ASC
                 """, (ti.start_date, ti.end_date))
 
                 papers_data = cur.fetchall()
