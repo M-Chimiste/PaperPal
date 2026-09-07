@@ -226,9 +226,9 @@ LMSTUDIO_DISABLE_THINKING=true
 - You can tune this with `SMTP_DNS_FALLBACK_ENABLED`, `SMTP_DNS_NAMESERVERS`, `SMTP_DNS_TIMEOUT_SEC`, and `SMTP_CONNECT_TIMEOUT_SEC`.
 
 **Gmail API Delivery Fallback:**
-- Newsletter email delivery now tries Gmail SMTP first, then falls back to the Gmail API over HTTPS if SMTP fails.
+- Newsletter email delivery tries Gmail SMTP first, then falls back to the Gmail API over HTTPS if SMTP fails before submission starts. An uncertain submission outcome suppresses automatic fallback to avoid duplicate delivery.
 - The Gmail API fallback requires a saved OAuth token file with the `gmail.send` scope.
-- Use `scripts/send_test_email.py --send --authorize` once to create the token file locally.
+- Supply an existing valid OAuth token through `GMAIL_TOKEN_FILE`; this checkout does not include the previously documented `scripts/send_test_email.py` authorization helper.
 - The token file defaults to `gmail_token.json`, and the Gmail API request timeout defaults to `30` seconds.
 
 **Newsletter Intro Timeout:**
@@ -964,4 +964,4 @@ Theseus Insight is maintained by [M. Chimiste](https://github.com/M-Chimiste) & 
 
 See [the reliability guide](docs/reliability.md) for locked installation, the local quality gate, credential migration, authenticated access, job recovery, diagnostics, and search/evaluation commands. No GitHub workflows are required.
 
-See [newsletter quality](docs/newsletter-quality.md) for local-model evidence extraction, editorial selection, source checks, and draft-only evaluation that never sends email.
+See [newsletter quality](docs/newsletter-quality.md) for local-model evidence extraction, editorial selection, source checks, and draft-only evaluation that never sends email. The final layout uses a full-issue prose summary, numbered paper titles, **What Changed → Why it matters → Evidence → Caveat**, and matching numbered source-note groups at the end. The guide also covers HTML previews, email-link compatibility, real-paper test findings, and the distinction between draft generation and sending.

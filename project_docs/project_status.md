@@ -6,6 +6,14 @@
 
 ## Recent Changes
 
+### Newsletter documentation refresh (2026-09-07)
+
+**Implemented:** Expanded docs/newsletter-quality.md to describe the final numbered paper/source headings, ordered brief fields, full-issue prose summary, paper-scoped citations, named-anchor limitations, and HTML escaping. Added a no-inference saved-draft preview example, the real-paper test results and editorial limitations, local artifact descriptions, implementation map, and explicit separation of draft evaluation from sending. Updated README layout guidance and SMTP fallback behavior; removed the runnable instruction for the missing scripts/send_test_email.py authorization helper.
+
+**Verification/debug log:** Compared the documentation with the current rendering, summary, evaluation, and mail code. Confirmed evaluation CLI subcommands using `--help`, compiled the documented preview example without executing inference or sending, checked every implementation-table file path, and ran `git diff --check` successfully. Documentation-only changes; no email, model requests, application restart, or database mutation.
+
+**Next:** Update the legacy scripts/send_newsletter.py reference matcher for numbered titles/source appendices and provide a supported strict single-recipient draft-send path before documenting either as the current workflow. Restore or replace the absent OAuth authorization helper. Actual inbox verification and reviewer calibration remain outstanding as described in the newsletter guide.
+
 ### Matching numbered paper and source headings (2026-09-07)
 
 Updated paper titles to “1. Title”, “2. Title”, etc., and applied identical numbered headings in the source appendix. Refreshed the five-paper HTML/Markdown draft; preserved existing citation labels and named anchors. Verified that all five summary headings match their source headings and every reference target resolves. All 19 newsletter tests and diff whitespace checks pass. No email was sent. Next: use this numbering for future generation and personal test sends.

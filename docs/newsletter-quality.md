@@ -1,10 +1,38 @@
 # Newsletter quality with local models
 
-The newsletter now uses the configured local models for editorial selection, evidence extraction, writing, and verification. Keep the current LM Studio/Ollama models; no model replacement or temperature change is required. The local deployment command remains `./start.sh`. Migration 018 runs at startup and creates a small metadata table; it does not rebuild the vector index.
+The newsletter uses configured local models for editorial selection, evidence extraction, writing, and verification. Configure local providers for the judge, content extraction, newsletter sections, and newsletter intro roles in `config/orchestration.json`. The evaluation CLI accepts LM Studio and Ollama and loads their host configuration from `.env` or explicit model settings. Test-only temperature overrides do not change saved application settings; the real-paper test below used 0.3.
+
+The local deployment command remains `./start.sh`. Migration 018 runs at startup and creates a small metadata table; it does not rebuild the vector index. Draft-only evaluation does not start the app or run migrations.
 
 ## What an issue contains
 
 Two featured papers receive up to 280 words of editorial text each; subsequent briefs receive up to 160. Each has **What Changed**, **Why it matters**, **Evidence**, **Caveat**, and a paper link, in that order. A single source-notes appendix at the end groups short original excerpts and evidence IDs by paper. Citations link to paper-scoped HTML anchors, and each notes group links back to its summary. Internal navigation requires a renderer or email client that preserves HTML anchors; external paper links remain ordinary links. Those notes are additional to the editorial word budget. Full source text, extracted claims, model/configuration provenance, and accepted briefs are retained in the edition artifact and per-paper checkpoints.
+
+Paper headings are numbered directly: **1. Paper title**, **2. Paper title**, and so on. The source appendix repeats the same number and title for each group. There is no separate “Paper P1” label above a title. The layout is:
+
+```text
+Issue summary covering all included papers
+
+1. First paper title
+   Read paper
+   What Changed
+   Why it matters
+   Evidence
+   Caveat
+
+2. Second paper title
+   ...
+
+Source notes
+   1. First paper title
+      P1·E1 (S1): source excerpt
+   2. Second paper title
+      P2·E1 (S2): source excerpt
+
+~Theseus Insight
+```
+
+`P2·E1` means evidence item E1 from paper 2; evidence numbering restarts per paper. `S2` identifies an extracted text chunk, not a PDF page. Visible excerpts contain at most 25 words plus an ellipsis; the saved evidence artifact contains the full quotation and source text. Horizontal rules separate the summary, papers, appendix, and signoff.
 
 The preamble summarizes all included papers in connected prose, covering contributions, findings, and boundaries with paper references (P1, P2, etc.), and undergoes a support review. Coverage validation requires every paper. If synthesis fails validation, it uses an extractive prose overview of all contributions rather than bullets covering only the first three. It never falls back to arbitrary raw model output. The signature appears at the end of the issue.
 
@@ -63,7 +91,7 @@ venv/bin/python -m scripts.newsletter_eval blind \
   --output data/evaluation/blind-review
 ```
 
-`--reuse-evidence` holds extraction fixed to compare only writing/synthesis. Without it, extraction is rerun on the frozen source. Temperature overrides affect only the evaluation clients, not saved application settings. The output records configuration/prompt/code hashes, model names, temperature, and elapsed time. Comparisons require identical fixture hashes. The blind directory contains shuffled Markdown drafts, a separate answer key with latency, and a ratings template. Rate factual support, specificity, relevance, readability, and non-repetition from 1–5 after checking source evidence.
+`--reuse-evidence` holds extraction fixed to compare only writing/synthesis. Without it, extraction is rerun on the frozen source. Temperature overrides affect only the evaluation clients, not saved application settings. The output records configuration/prompt/code hashes, model names, temperature, and elapsed time. Comparisons require identical fixture hashes. The blind directory contains shuffled Markdown and styled HTML drafts, a separate answer key with latency, and a ratings template. Rate factual support, specificity, relevance, readability, and non-repetition from 1–5 after checking source evidence.
 
 ```sh
 venv/bin/python -m scripts.newsletter_eval report \
@@ -74,3 +102,63 @@ venv/bin/python -m scripts.newsletter_eval report \
 Unrated dimensions remain unknown and coverage is reported. A synthetic smoke test or local model approval is not a measured improvement on real newsletters. Evaluation drafts are never emailed automatically.
 
 Generation and blind comparisons also write styled HTML previews alongside Markdown. Previews use the same pure renderer as email, including blue heading rules, typography, and horizontal section dividers; rendering does not initialize an email client or send anything.
+
+## Refresh a saved draft after a layout change
+
+Run from the repository root. This example uses the existing local five-paper artifact and writes a new preview without inference, database access, or email. It requires the saved `preamble` and validated `papers` fields; the `data/evaluation` artifacts are local outputs and may not exist in another checkout.
+
+```sh
+venv/bin/python - <<'PY'
+import json
+from pathlib import Path
+from scripts.newsletter_eval import save_preview
+from theseus_insight.pipeline.newsletter_quality import assemble_newsletter
+
+directory = Path('data/evaluation/five-paper-local')
+issue = json.loads((directory / 'newsletter.json').read_text())
+content = assemble_newsletter(issue['preamble'], issue['papers'])
+save_preview(directory / 'layout-preview.json', content)
+PY
+```
+
+This writes `layout-preview.md` and `layout-preview.html`; `save_preview` does not write JSON. Choose a new basename for subsequent previews because existing files are not overwritten. Add an issue title/date to the preamble before assembly if desired. Historical artifacts without a saved preamble need their introduction supplied explicitly.
+
+## Real-paper test and email checks
+
+The September 7, 2026 test selected five papers with stored scores of 10/10 from the active profile. Eight candidates were examined: two were filtered for relevance and one failed brief support review. The five included PDFs yielded 51 text chunks and 407 claims with source-matching quotations; 32 non-verbatim quotations were excluded after retries. Quotations matching text does not establish that every paraphrased claim follows from them.
+
+The test exposed scope and baseline overstatements that passed the local reviewer. Three briefs were regenerated locally with editorial feedback, including focused evidence selection for two. An initial synthesized introduction overclaimed long-context retrieval benefits and was replaced with contribution excerpts. The current draft later received a newly generated, reviewed prose summary covering all five papers. This is a locally generated draft with editorial correction, not evidence that unattended review is reliable.
+
+Local artifacts in `data/evaluation/five-paper-local/` include:
+
+| Artifact | Purpose |
+| --- | --- |
+| `newsletter.html`, `newsletter.md`, `newsletter.json` | Current layout and reviewed content |
+| `newsletter-automatic.*` | Original automatic draft, before editorial corrections |
+| `test-report.md`, `test-manifest.json` | Run details, hashes, model settings, and review findings |
+| Per-paper directories | Downloaded PDFs, parsed Markdown, evidence, rejected quotations, and saved drafts |
+| `personal-email-test*-receipt.json` | Recipient, message ID, content hash, and mail-server acceptance for explicitly requested personal tests |
+
+The test used the existing local Gemma model at temperature 0.3. Cached requests and debugging reruns make its elapsed time unsuitable as a clean throughput benchmark. Application settings and the production database were not modified by the test.
+
+Two personal emails were explicitly requested and accepted by SMTP. The first exposed escaped apostrophes and nonworking ID-only reference jumps. The second contained corrected escaping, named anchors, and a new summary. The final matching numbered headings were added afterward and have not been emailed in those tests. Mail-server acceptance does not verify inbox rendering or link behavior; the receipts identify which HTML version was submitted.
+
+### Sending is a separate operation
+
+The evaluation CLI never sends mail. Standard `GmailCommunication` distribution delivery includes the sender as well as configured recipients; it is not a strict single-recipient test path. The personal tests used an explicit one-address SMTP envelope with no CC, BCC, profile-recipient lookup, or extra sender copy.
+
+`scripts/send_newsletter.py` is a legacy database-newsletter sender. Its title-based reference reconstruction does not account for the current numbered headings and source appendix, and its normal delivery path includes the sender. It needs updating before it is used for this layout or a strict one-recipient test. The retained ad hoc test runners are local run artifacts, not a supported sending CLI.
+
+## Implementation and verification
+
+| File | Responsibility |
+| --- | --- |
+| `theseus_insight/prompt/newsletter_quality.py` | Extraction, writing, editorial, summary, and review instructions |
+| `theseus_insight/pipeline/newsletter_quality.py` | Schemas, source checks, editorial feedback, numbered rendering, source appendix, and assembly |
+| `theseus_insight/pipeline/stages/newsletter_sections.py` | Candidate processing and per-paper checkpoints |
+| `theseus_insight/pipeline/stages/newsletter_content.py` | Reviewed summary, shared assembly, and edition persistence |
+| `theseus_insight/communication/rendering.py` | Shared pure Markdown-to-HTML renderer |
+| `scripts/newsletter_eval.py` | Draft generation and human-comparison CLI |
+| `tests/unit/test_newsletter_quality.py` | Evidence, summary coverage, escaping, layout, and citation-target regressions |
+
+Run the focused checks with `venv/bin/python -m pytest tests/unit/test_newsletter_quality.py -q`. Structural tests verify matching numbered headings, unique `name`/`id` targets, reference resolution, and readable escaped text. These checks do not replace an actual email-client rendering test. Remaining quality work includes stronger evidence-claim entailment, baseline/scope handling, reviewer calibration, and less redundant citation selection.
