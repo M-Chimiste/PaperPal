@@ -1,10 +1,43 @@
 # Theseus Insight Project Status
 
-## Last Updated: July 31, 2026
+## Last Updated: September 7, 2026
 
 ---
 
 ## Recent Changes
+
+### Repository reliability, retrieval, and local verification (2026-09-07)
+
+**Implemented:**
+- Write-only credential status responses, authenticated versioned encryption, explicit transactional migration for legacy plaintext/XOR values, and local/network HTTP + WebSocket access controls.
+- Durable task dispatch created atomically with supported tasks, expiring instance leases plus PostgreSQL execution locks, conservative restart recovery, and explicit retry/delivery-resolution controls in Run History.
+- Removed import-time task failure marking and machine-wide startup process killing. Judge subprocesses track the specific launching process; scheduled jobs elect one database-backed leader with standby takeover.
+- Newsletter checkpoint directories are scoped by task, writes are atomic, configuration/prompt hashes gate reuse, and database checkpoint job IDs survive retry. Persistent email receipts prevent automatic resend after completion and require explicit review after uncertain submission.
+- Fixed concrete handler failures discovered by workflow tests: callback shadowing, `config` versus `config_json`, incompatible newsletter constructor kwargs, and serialization of date/model values in task configuration.
+- Bounded, off-event-loop retrieval with cached model initialization; independent semantic/full-text candidates, reciprocal rank fusion, model-identity filtering and an HNSW migration. Candidate totals are explicitly distinguished from exhaustive corpus totals.
+- Fail-fast startup, liveness/readiness endpoints, stage timing/error diagnostics, deployment/run provenance, and database-backed WebSocket snapshots for reconnects across instances.
+- Python 3.11 macOS/Linux lockfiles, pinned LLMFactory commit, portable local Make targets, independent unit/integration suites, API/schema drift checks, an exact lint-debt baseline, and Docker build fixes. No GitHub workflows were added.
+- Added 30 starter research-evaluation queries, example profile relevance judgments, recorded API evaluation, human-reviewed citation metrics, baseline comparison, and an isolated synthetic search benchmark.
+- Added `docs/reliability.md` covering installation, verification, access, migration, recovery semantics, and evaluation limitations.
+
+**Verification/debug log:**
+- Final `make check` passed: 9 independent Python unit tests and 66 backend integration tests. Lifecycle and scheduler ownership tests used the disposable PostgreSQL cluster at port 5434, never the application database; that cluster was stopped after verification.
+- Frontend: 13 tests pass and TypeScript/Vite production build passes; existing large-chunk warning remains.
+- Local lint ratchet: no new diagnostics; all 291 pre-existing diagnostics remain visible to the full lint command.
+- OpenAPI schema and generated TypeScript checks pass.
+- 10,000 synthetic papers in a separate `theseus_benchmark_test` database: ten retrieval runs, median ~34.8 ms, maximum ~37.4 ms, 1,000 fused candidates. This is not a live-library performance claim.
+- An initial benchmark overlapped test-database resets and returned zero candidates; that result was discarded. The benchmark now owns a separate test database and rejects unexpectedly empty results.
+- The prior orchestration golden test depended on the user's local model configuration. It now uses a deterministic fixture; the user's `config/orchestration.json` edits were preserved.
+- Dependency resolution initially included unsupported Windows/Python combinations; the supported runtime is now explicit (Python 3.11, macOS/Linux), with the existing verified package versions retained as constraints.
+- Docker validation found the legacy Node image incompatible with test dependencies and a missing C/C++ compiler for llama-cpp. The image now uses Node 22.14, `npm ci`, the pinned Python export, and the required native build tools.
+- Container runtime validation then detected an unsupported CUDA wheel on Linux ARM. Linux lock resolution now selects official CPU PyTorch wheels, removing unused CUDA packages while preserving macOS MPS versions.
+- Final Docker image built successfully. Isolated container validation passed dependency consistency, PyTorch/Docling/application imports, fresh database migrations, readiness, unauthenticated rejection/authenticated access, and encrypted credential persistence across restart. Temporary containers and their internal network were removed; no host ports or user data mounts were used. The credential migration CLI is included in the image, and build context excludes runtime data and dependency caches.
+
+**Deployment/next:**
+- Apply migration 017 on the next application startup; allow time for HNSW index creation on large libraries.
+- Set `APP_AUTH_TOKEN` for Docker/network access and migrate legacy credentials using the correct explicit format and original `APP_SECRET_KEY` (see the reliability guide).
+- Confirm starter relevance judgments/corpus coverage against personal research profiles before using evaluation scores to tune production models. Real model cost and citation judgments remain unknown until recorded/reviewed, rather than being fabricated.
+
 
 ### Restore Docling layout inference on Apple MPS (2026-07-31)
 

@@ -143,12 +143,12 @@ class TheseusInsight:
                  progress_callback: Optional[Callable[[str, float, str], None]] = None):
         
         # Store task_id for logging
-        self.task_id = task_id or f"theseus_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        self.task_id = task_id or str(__import__("uuid").uuid4())
 
         self.verbose = verbose
         self.progress_callback = progress_callback
         self.save_dialogue = save_dialogue
-        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_dir = os.path.join("data", "checkpoints", self.task_id) if checkpoint_dir == "checkpoints" else checkpoint_dir
         self.generate_email = generate_email
         self.publish_podcast = publish_podcast
         self.generate_podcast = generate_podcast
@@ -439,7 +439,10 @@ class TheseusInsight:
             "top_n": self.top_n,
             "cosine_threshold": self.cosine_similarity_threshold,
             "profile_ids": self.profile_ids_override,
-            "task_id": self.task_id
+            "task_id": self.task_id,
+            "orchestration": self.orchestration_config,
+            "research_interests": self.research_interests,
+            "recipients": self.receiver_address,
         })
 
     # Checkpoint mechanics live in pipeline/checkpoints.py (B8); these
@@ -596,52 +599,53 @@ class TheseusInsight:
             print(f"{'='*80}\n")
         
         try:
+            from .observability import run_stage
             # Initialize checkpoint manager if using database checkpoints
             await self._init_checkpoint_manager()
             
             # -----------
             # Stage 1: Download Papers (pipeline/stages/download.py, B9)
             # -----------
-            data_df, exit_early = await download_stage.run(self, start_from, progress_callback)
+            data_df, exit_early = await run_stage("download", download_stage.run, self, start_from, progress_callback)
             if exit_early:
                 return
 
             # -----------
             # Stage 2: Embed Papers (pipeline/stages/embed.py, B9)
             # -----------
-            embedded_df, exit_early = await embed_stage.run(self, data_df, start_from, progress_callback)
+            embedded_df, exit_early = await run_stage("embed", embed_stage.run, self, data_df, start_from, progress_callback)
             if exit_early:
                 return
 
             # -----------
             # Stage 3: Rank Papers (pipeline/stages/rank.py, B9)
             # -----------
-            top_n_df = await rank_stage.run(self, embedded_df, start_from, progress_callback)
+            top_n_df = await run_stage("rank", rank_stage.run, self, embedded_df, start_from, progress_callback)
             embedded_df = None  # the stage releases embeddings; drop our reference too
 
             # -----------
             # Stage 4: Newsletter Sections (pipeline/stages/newsletter_sections.py, B9)
             # -----------
-            sections_data = await newsletter_sections_stage.run(self, top_n_df, start_from, progress_callback)
+            sections_data = await run_stage("newsletter_sections", newsletter_sections_stage.run, self, top_n_df, start_from, progress_callback)
 
             # -----------
             # Stage 5: Newsletter Content (pipeline/stages/newsletter_content.py, B9)
             # -----------
-            newsletter_content, sections_data = await newsletter_content_stage.run(
+            newsletter_content, sections_data = await run_stage("newsletter_content", newsletter_content_stage.run,
                 self, sections_data, start_from, progress_callback
             )
 
             # -----------
             # Stage 6: Send Email (pipeline/stages/email.py, B9)
             # -----------
-            newsletter_content, sections_data = await email_stage.run(
+            newsletter_content, sections_data = await run_stage("email", email_stage.run,
                 self, newsletter_content, sections_data, progress_callback
             )
 
             # -----------
             # Stage 7: Podcast (pipeline/stages/podcast.py, B9)
             # -----------
-            await podcast_stage.run(self, top_n_df, sections_data, progress_callback)
+            await run_stage("podcast", podcast_stage.run, self, top_n_df, sections_data, progress_callback)
 
             # -----------
             # Final Step: Mark completion, purge + cleanup
@@ -679,7 +683,7 @@ class TheseusInsight:
                 and len(top_n_df) > 0
             )
             if produced_papers:
-                self._cleanup_checkpoints()
+                await self._cleanup_checkpoints_async()
             elif self.verbose:
                 print(
                     "Skipping checkpoint cleanup: run completed with no papers ranked. "

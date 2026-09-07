@@ -357,6 +357,10 @@ class SimilarPapersResponse(BaseModel):
     total_similar: int
 
 class HybridSearchRequest(BaseModel):
+    profile_ids: Optional[List[int]] = None
+    min_profile_score: Optional[float] = Field(None, ge=0, le=10)
+    max_profile_score: Optional[float] = Field(None, ge=0, le=10)
+    profile_related: Optional[bool] = None
     query_text: str = Field(..., description="Search query text")
     page: int = Field(1, gt=0, description="Page number")
     page_size: int = Field(10, gt=0, le=100, description="Number of results per page")
@@ -369,6 +373,8 @@ class HybridSearchRequest(BaseModel):
     to_date: Optional[str] = Field(None, description="End date filter (YYYY-MM-DD)")
 
 class HybridSearchResponse(BaseModel):
+    candidate_limit: int = 500
+    count_scope: str = "retrieved_candidates"
     query_text: str
     results: List[PaperApiResponse]
     total_results: int

@@ -117,11 +117,6 @@ async def run_custom_newsletter(params, task_id: str, loop: asyncio.AbstractEven
     """
     run_db_path = os.getenv("DATABASE_URL", "postgresql://theseus:theseus@localhost:5432/theseusdb")
     try:
-        await task_manager.create_task(
-            task_id=task_id,
-            task_type="custom_newsletter_run",
-            config=params.dict(),
-        )
         await task_manager.update_task_status(
             task_id,
             TaskStatus.PENDING,
@@ -177,6 +172,7 @@ async def run_custom_newsletter(params, task_id: str, loop: asyncio.AbstractEven
             data_path=run_db_path,
             verbose=True,
             task_id=task_id,
+            checkpoint_dir=os.path.join("data", "checkpoints", task_id),
             use_multi_server_judge=params.use_multi_server_judge,
             judge_server_ids=[s.id for s in judge_servers] if judge_servers else None,
             newsletter_job_id=newsletter_job_id,

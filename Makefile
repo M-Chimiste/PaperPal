@@ -1,16 +1,43 @@
-PYTHON ?= /Users/c/miniforge3/envs/theseus/bin/python
-COMPOSE ?= docker-compose
+PYTHON ?= $(if $(wildcard venv/bin/python),$(CURDIR)/venv/bin/python,python3)
+COMPOSE ?= docker compose
+export PYTHONPATH := $(CURDIR)
+export UV_CACHE_DIR ?= $(CURDIR)/.cache/uv
 
-.PHONY: test test-db test-down check
+.PHONY: test test-unit test-integration test-db test-down check generate-api check-api lint evaluation-smoke docker-check
 
-test-db:  ## Start the ephemeral test Postgres (port 5434)
+test-db:
 	$(COMPOSE) -f docker-compose.test.yml up -d --wait
 
-test: test-db  ## Run the backend characterization suite
-	$(PYTHON) -m pytest tests/backend -x -q
+test-unit:
+	$(PYTHON) -m pytest tests/unit -q
 
-test-down:  ## Stop and remove the test database
+test-integration:
+	$(PYTHON) -m pytest tests/backend -q
+
+test: test-unit test-integration
+
+test-down:
 	$(COMPOSE) -f docker-compose.test.yml down -v
 
-check: test  ## Tests + frontend static checks
-	cd theseus-ui && npx tsc -b --noEmit && npm run lint
+lint:
+	node scripts/check_lint.mjs
+
+generate-api:
+	$(PYTHON) -m scripts.export_openapi
+	cd theseus-ui && npm run generate:api
+
+check-api:
+	$(PYTHON) -m scripts.export_openapi --check
+	node scripts/check_api_types.mjs
+
+check: test lint check-api evaluation-smoke
+	cd theseus-ui && npm test && npm run build
+	uv lock --check
+
+# Requires Docker; separate from the fast local gate.
+docker-check:
+	docker build -t theseus-insight:validation .
+	$(PYTHON) -m scripts.validate_container
+
+evaluation-smoke:
+	$(PYTHON) -m scripts.evaluate_research --smoke

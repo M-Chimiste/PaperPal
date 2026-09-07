@@ -798,32 +798,6 @@ async def generate_profile_newsletter(
         # Create task ID and prepare configuration
         task_id = str(uuid.uuid4())
         run_db_path = os.getenv("DATABASE_URL", "postgresql://theseus:theseus@localhost:5432/theseusdb")
-        loop = asyncio.get_event_loop()
-
-        def pipeline_progress_callback(stage: str, progress_val: float, message: str):
-            """Updates the task status with the current pipeline progress."""
-            status_detail = f"Stage: {stage} - {message} ({progress_val:.2f}%)"
-            overall_status_for_tm = TaskStatus.PROCESSING
-            if stage.lower() == "newsletter_complete" and progress_val >= 100.0:
-                overall_status_for_tm = TaskStatus.COMPLETED
-
-            async def update_status_async():
-                await task_manager.update_task_status(
-                    task_id,
-                    overall_status_for_tm,
-                    message=status_detail,
-                    progress=progress_val,
-                    current_step=stage,
-                )
-
-            if loop.is_running():
-                asyncio.run_coroutine_threadsafe(update_status_async(), loop)
-            else:
-                try:
-                    asyncio.create_task(update_status_async())
-                except RuntimeError as e:
-                    print(f"RuntimeError creating task for status update: {e}")
-
         # Prepare profile-specific orchestration config with ArXiv filters
         # Get base orchestration config from settings (run in thread to avoid blocking event loop)
         base_orchestration_json = await asyncio.to_thread(SettingsRepository.get, "orchestration")
@@ -859,75 +833,16 @@ async def generate_profile_newsletter(
         else:
             print("[DEBUG] Profile has no arxiv_filters, using defaults")
 
-        async def background_pipeline_run():
-            """Run the newsletter generation pipeline for the specific profile."""
-            try:
-                await task_manager.create_task(
-                    task_id=task_id,
-                    task_type="profile_newsletter_run",
-                    config={
-                        "profile_id": profile_id,
-                        "start_date": str(request.start_date),
-                        "end_date": str(request.end_date),
-                        "email_recipients": email_recipients,
-                        "research_interests": research_interests_text,
-                        "topic_id": request.topic_id,
-                        "generate_podcast_run": request.generate_podcast_run,
-                        "use_profile_recipients": request.use_profile_recipients
-                    }
-                )
-                
-                await task_manager.update_task_status(
-                    task_id,
-                    TaskStatus.PENDING,
-                    message="Profile newsletter pipeline initialized.",
-                    current_step="initializing",
-                )
-
-                # Create TheseusInsight instance with profile-specific configuration
-                ti_instance = TheseusInsight(
-                    research_interests_override=research_interests_text,
-                    start_date_override=request.start_date,
-                    end_date_override=request.end_date,
-                    receiver_address_override=email_recipients,
-                    profile_ids_override=[profile_id],  # Target specific profile
-                    orchestration_config=orchestration_config,  # Use profile-specific ArXiv filters
-                    generate_podcast=request.generate_podcast_run,
-                    db_saving=True,
-                    data_path=run_db_path,
-                    verbose=True,
-                    task_id=task_id
-                )
-                
-                # Call run_async directly since we're already in an async context
-                # Using asyncio.to_thread with run() causes nested event loops and connection conflicts
-                await ti_instance.run_async(
-                    progress_callback=pipeline_progress_callback,
-                )
-                
-                # Always mark as completed if we reach here successfully
-                # The progress callback may have already marked it completed, which is fine
-                await task_manager.update_task_status(
-                    task_id,
-                    TaskStatus.COMPLETED,
-                    message="Profile newsletter generation completed.",
-                    current_step="newsletter_complete",
-                )
-
-            except Exception as e:
-                error_message = f"Error in profile newsletter pipeline for task {task_id}: {type(e).__name__} - {str(e)}"
-                if task_manager:
-                    await task_manager.update_task_status(
-                        task_id,
-                        TaskStatus.FAILED,
-                        error=error_message,
-                        message=error_message,
-                        current_step="newsletter_failed",
-                    )
-                print(error_message)
-
-        # Enqueue the background task
-        await task_manager.enqueue_task(lambda _tid: background_pipeline_run(), task_id)
+        config = {
+            "profile_id": profile_id,
+            "start_date": str(request.start_date), "end_date": str(request.end_date),
+            "email_recipients": email_recipients, "research_interests": research_interests_text,
+            "generate_podcast_run": request.generate_podcast_run,
+            "orchestration_config": orchestration_config,
+        }
+        await task_manager.create_task(task_id, "profile_newsletter", config)
+        from ..task_handlers.recoverable import run_profile_newsletter_task
+        await task_manager.enqueue_task(run_profile_newsletter_task, task_id)
         
         return ProfileNewsletterResponse(
             task_id=task_id,
@@ -1221,4 +1136,4 @@ async def estimate_bulk_judge_run(
 
 def _convert_paper_timestamps(paper_data: dict) -> dict:
     """Convert PostgreSQL datetime objects to ISO strings for API response."""
-    return isoformat_fields(paper_data, ('date', 'date_run', 'created_at', 'updated_at')) 
+    return isoformat_fields(paper_data, ('date', 'date_run', 'created_at', 'updated_at'))

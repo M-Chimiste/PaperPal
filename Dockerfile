@@ -1,5 +1,5 @@
 # Stage 1: Build React Frontend
-FROM node:18-alpine AS frontend-builder
+FROM node:22.14-alpine AS frontend-builder
 
 WORKDIR /app/theseus-ui
 
@@ -7,7 +7,7 @@ WORKDIR /app/theseus-ui
 COPY ./theseus-ui/package.json ./
 COPY ./theseus-ui/package-lock.json ./
 # If using yarn, copy yarn.lock instead and use yarn install
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the frontend application code
 COPY ./theseus-ui/ .
@@ -21,7 +21,10 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ARG BUILD_REVISION=unknown
+ENV BUILD_REVISION=$BUILD_REVISION
 ENV POETRY_NO_INTERACTION 1
+ENV CMAKE_BUILD_PARALLEL_LEVEL=2
 ENV RUNNING_IN_DOCKER true
 ENV OLLAMA_PASSTHROUGH true
 
@@ -29,6 +32,11 @@ ENV OLLAMA_PASSTHROUGH true
 # ffmpeg is optional, include if your backend directly processes audio/video with it
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    pkg-config \
+    git \
+    ca-certificates \
     ffmpeg \
     fonts-noto-cjk \
     fontconfig \
@@ -43,9 +51,9 @@ WORKDIR /app
 
 # Install Python dependencies
 # Assuming requirements.txt is in the project root
-COPY requirements.txt .
+COPY requirements.lock .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir --no-deps -r requirements.lock
 
 # Copy the backend application code
 # Adjust these COPY commands based on your project structure
@@ -53,6 +61,7 @@ COPY ./theseus_insight ./theseus_insight
 COPY ./config ./config
 # Copy SQL migration scripts
 COPY ./scripts/*.sql ./sql/
+COPY ./scripts/migrate_credentials.py ./scripts/migrate_credentials.py
 # main.py is inside theseus_insight directory, not in root
 # COPY main.py .
 # Add any other necessary files/folders for the backend (e.g., scripts, utils)

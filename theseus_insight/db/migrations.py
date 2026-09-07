@@ -57,6 +57,7 @@ class MigrationRunner:
             (14, "014_interest_short_labels.sql", "Add short labels for profile interests"),
             (15, "015_profile_star_map.sql", "Add cached star map points per profile"),
             (16, "016_profile_star_map_3d.sql", "Add Z coordinate for 3D star map"),
+            (17, "017_runtime_reliability.sql", "Durable dispatch, delivery receipts, diagnostics and search index"),
         ]
     
     def _get_file_checksum(self, filepath: pathlib.Path) -> str:
@@ -247,12 +248,18 @@ async def check_and_apply_migrations() -> None:
     This function is designed to be called from the FastAPI lifespan context.
     """
     runner = MigrationRunner()
-    applied, skipped, issues = runner.run_migrations()
+    import asyncio
+    def migrate_locked():
+        with psycopg.connect(DATABASE_URL) as conn:
+            conn.execute("SELECT pg_advisory_lock(hashtextextended('theseus:migrations', 0))")
+            try:
+                return runner.run_migrations()
+            finally:
+                conn.execute("SELECT pg_advisory_unlock(hashtextextended('theseus:migrations', 0))")
+    applied, skipped, issues = await asyncio.to_thread(migrate_locked)
     
     if issues:
-        # Log issues but don't prevent startup
-        print(f"[MIGRATION] WARNING: {len(issues)} issues during migration")
-        # In production, you might want to send these to monitoring
+        raise RuntimeError(f"Database migration failed: {len(issues)} issue(s); inspect migration logs")
     
     # Post-migration checks and fixes
     _ensure_paper_profile_scores_constraint()

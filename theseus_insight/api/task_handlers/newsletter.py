@@ -25,7 +25,7 @@ async def run(task_manager: "TaskManager", task_id: str):
         task = TaskRepository.get_task(task_id)
         if not task:
             raise ValueError(f"Task {task_id} not found")
-        config = task["config"]
+        config = task["config_json"]
         email_recipients = config.get("emailRecipients", None)
         research_interests_override = config.get("researchInterests", None)
 
@@ -88,16 +88,15 @@ async def run(task_manager: "TaskManager", task_id: str):
             research_interests_override=research_interests_override,
             orchestration_config=orchestration_config,
             task_id=task_id,
+            checkpoint_dir=os.path.join("data", "checkpoints", task_id),
             progress_callback=progress_callback(task_manager, task_id),
             profile_ids_override=resolved_profile_ids,  # Pass resolved profile IDs
-            top_n=config.get("num_sections", 5),
-            **{
-                k: v for k, v in config.items()
-                if k not in ["emailRecipients", "researchInterests", "profile_id", "profile_ids", "profile_tag", "profile_tags", "use_profile_recipients", "num_sections"]
-            },
+            top_n=config.get("num_sections", config.get("max_papers_to_select", 5)),
+            start_date_override=config.get("start_date_override", config.get("start_date")),
+            end_date_override=config.get("end_date_override", config.get("end_date")),
             generate_podcast=False,  # We handle podcast generation separately for now
             data_path=os.getenv("DATABASE_URL", "postgresql://theseus:theseus@localhost:5432/theseusdb"),
-            generate_email=True,
+            generate_email=config.get("send_email", True),
             receiver_address_override=email_recipients,
             verbose=True
         )
@@ -111,12 +110,12 @@ async def run(task_manager: "TaskManager", task_id: str):
         )
 
         # Create progress callback
-        progress_callback = progress_callback(task_manager, task_id)
+        callback = progress_callback(task_manager, task_id)
 
         # Run the pipeline
         result = await asyncio.to_thread(
             ti.run,
-            progress_callback=progress_callback
+            progress_callback=callback
         )
 
         # Result will be stored via update_task_status call

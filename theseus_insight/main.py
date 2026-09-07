@@ -60,6 +60,7 @@ STATIC_INDEX_HTML = STATIC_FILES_BASE_DIR / "index.html"
 # Lifespan context manager
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
+    app_instance.state.ready = False
     # Startup logic
     print("INFO:     Starting up Theseus Insight API...")
     try:
@@ -171,7 +172,7 @@ async def lifespan(app_instance: FastAPI):
             await task_manager.start_worker()
             print("INFO:     Task manager workers started successfully.")
         except Exception as e:
-            print(f"Error starting task manager workers: {e}")
+            raise RuntimeError("Task workers failed to start") from e
         
         # Run media file cleanup
         print("INFO:     Running media file cleanup...")
@@ -197,12 +198,16 @@ async def lifespan(app_instance: FastAPI):
             await scheduler.start()
             print("INFO:     Scheduler started successfully.")
         except Exception as e:
-            print(f"Error starting scheduler: {e}")
+            raise RuntimeError("Scheduler failed to start") from e
             
     except Exception as e:
-        print(f"Error during startup: {e}")
+        await task_manager.cleanup()
+        await scheduler.stop()
+        raise RuntimeError("Theseus startup failed; inspect startup logs") from e
     print("INFO:     Theseus Insight API startup complete.")
+    app_instance.state.ready = True
     yield
+    app_instance.state.ready = False
     # Shutdown logic
     print("INFO:     Shutting down Theseus Insight API...")
     try:
@@ -238,12 +243,11 @@ app = FastAPI(
 )
 
 # CORS middleware
-CORS_ORIGINS = [
-    "http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000",
-    "http://127.0.0.1:8000", "http://localhost:5173", "*"
-]
-if os.getenv("PRODUCTION_FRONTEND_URL"):
-    CORS_ORIGINS.append(os.getenv("PRODUCTION_FRONTEND_URL"))
+CORS_ORIGINS = [x.strip() for x in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if x.strip()]
+if "*" in CORS_ORIGINS:
+    raise ValueError("CORS_ORIGINS must contain explicit origins")
+from .security import AccessMiddleware
+app.add_middleware(AccessMiddleware)
 app.add_middleware(
     CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
@@ -289,116 +293,6 @@ if STATIC_FILES_BASE_DIR and STATIC_FILES_BASE_DIR.exists():
 else:
     print(f"WARNING: Static files base directory not found at {STATIC_FILES_BASE_DIR}. Frontend will not be served.")
 
-@app.get("/{full_path:path}")
-async def serve_react_app(full_path: str):
-    """Serves the index.html for any path not caught by API routes or specific static files."""
-    
-    # Skip API routes and specific files
-    if full_path.startswith("api/") or full_path.startswith("ws/") or full_path.startswith("docs") or full_path.startswith("openapi"):
-        raise HTTPException(status_code=404, detail="API endpoint not found")
-    
-    if STATIC_INDEX_HTML and STATIC_INDEX_HTML.exists():
-        print(f"INFO:     Serving React app from {STATIC_INDEX_HTML} for path: /{full_path}")
-        return FileResponse(STATIC_INDEX_HTML)
-    else:
-        # Enhanced error message with debugging information
-        error_details = {
-            "message": "Frontend not available",
-            "static_files_dir": str(STATIC_FILES_BASE_DIR) if STATIC_FILES_BASE_DIR else "Not set",
-            "static_files_exists": STATIC_FILES_BASE_DIR.exists() if STATIC_FILES_BASE_DIR else False,
-            "index_html_path": str(STATIC_INDEX_HTML) if STATIC_INDEX_HTML else "Not set", 
-            "index_html_exists": STATIC_INDEX_HTML.exists() if STATIC_INDEX_HTML else False,
-            "is_docker": IS_RUNNING_IN_DOCKER,
-            "current_working_dir": str(pathlib.Path.cwd()),
-            "requested_path": full_path
-        }
-        
-        detail_message = f"Frontend index.html not found at {STATIC_INDEX_HTML}."
-        
-        if not IS_RUNNING_IN_DOCKER:
-            detail_message += " Ensure the frontend has been built (e.g., `npm run build` in `theseus-ui` directory)."
-        
-        print(f"ERROR: Frontend serving failed. Details: {error_details}")
-        raise HTTPException(status_code=404, detail=detail_message)
-
-def cleanup_old_media_files(max_age_days: int = 30):
-    """
-    Clean up old podcast and visualization files that are older than max_age_days.
-    This preserves database records but removes actual media files to save disk space.
-    """
-    try:
-        cutoff_date = datetime.now() - timedelta(days=max_age_days)
-        total_deleted = 0
-        total_size_freed = 0
-        
-        # Directories to clean
-        cleanup_dirs = [
-            "data/podcasts",
-            "data/visualizations", 
-            "data/temp"  # Also clean temp files
-        ]
-        
-        for base_dir in cleanup_dirs:
-            if not os.path.exists(base_dir):
-                continue
-                
-            print(f"INFO:     Cleaning up old files in {base_dir}...")
-            dir_deleted = 0
-            dir_size_freed = 0
-            
-            # Walk through all subdirectories and files
-            for root, dirs, files in os.walk(base_dir):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    try:
-                        # Get file modification time
-                        file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
-                        
-                        # Check if file is older than cutoff
-                        if file_mtime < cutoff_date:
-                            file_size = os.path.getsize(file_path)
-                            os.remove(file_path)
-                            
-                            dir_deleted += 1
-                            dir_size_freed += file_size
-                            print(f"INFO:     Deleted old file: {file_path} (age: {(datetime.now() - file_mtime).days} days)")
-                            
-                    except Exception as e:
-                        print(f"Warning: Could not delete file {file_path}: {e}")
-                        continue
-            
-            # Clean up empty directories after file deletion
-            try:
-                for root, dirs, files in os.walk(base_dir, topdown=False):
-                    for dir_name in dirs:
-                        dir_path = os.path.join(root, dir_name)
-                        try:
-                            # Only remove if directory is empty and not the base directory
-                            if not os.listdir(dir_path) and dir_path != base_dir:
-                                os.rmdir(dir_path)
-                                print(f"INFO:     Removed empty directory: {dir_path}")
-                        except Exception as e:
-                            # Directory not empty or other error, skip
-                            continue
-            except Exception as e:
-                print(f"Warning: Error during directory cleanup in {base_dir}: {e}")
-            
-            total_deleted += dir_deleted
-            total_size_freed += dir_size_freed
-            
-            if dir_deleted > 0:
-                size_mb = dir_size_freed / (1024 * 1024)
-                print(f"INFO:     Cleaned {dir_deleted} files from {base_dir}, freed {size_mb:.2f} MB")
-        
-        if total_deleted > 0:
-            total_size_mb = total_size_freed / (1024 * 1024)
-            print(f"INFO:     Total cleanup: {total_deleted} files deleted, {total_size_mb:.2f} MB freed")
-        else:
-            print(f"INFO:     No old files found to clean up (older than {max_age_days} days)")
-            
-    except Exception as e:
-        print(f"ERROR: Failed to run media file cleanup: {e}")
-        # Don't raise the error - we don't want cleanup failure to prevent API startup
 
 # Scheduler diagnostic endpoints
 @app.get("/api/scheduler/status")
@@ -582,4 +476,139 @@ async def get_scheduler_diagnostics():
             ]
         }
     except Exception as e:
-        return {"error": f"Failed to get scheduler diagnostics: {str(e)}"} 
+        return {"error": f"Failed to get scheduler diagnostics: {str(e)}"}
+
+@app.get("/health/live", include_in_schema=False)
+async def liveness():
+    return {"status": "alive"}
+
+
+@app.get("/health/ready", include_in_schema=False)
+async def readiness():
+    from .db.async_bridge import run_repo
+    from .db import get_cursor
+    from fastapi.responses import JSONResponse
+    def ping():
+        with get_cursor() as cur:
+            cur.execute("SELECT 1")
+    workers = (task_manager.general_worker_task, task_manager.visualizer_worker_task)
+    if not getattr(app.state, "ready", False) or any(w is None or w.done() for w in workers) or not (scheduler.is_running or getattr(scheduler, "standby", False)):
+        return JSONResponse({"status": "not_ready", "dependency": "runtime"}, status_code=503)
+    try:
+        import asyncio
+        await asyncio.wait_for(run_repo(ping), timeout=3)
+    except Exception:
+        return JSONResponse({"status": "not_ready", "dependency": "database"}, status_code=503)
+    return {"status": "ready"}
+
+
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    """Serves the index.html for any path not caught by API routes or specific static files."""
+
+    # Skip API routes and specific files
+    if full_path.startswith("api/") or full_path.startswith("ws/") or full_path.startswith("docs") or full_path.startswith("openapi"):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+
+    if STATIC_INDEX_HTML and STATIC_INDEX_HTML.exists():
+        print(f"INFO:     Serving React app from {STATIC_INDEX_HTML} for path: /{full_path}")
+        return FileResponse(STATIC_INDEX_HTML)
+    else:
+        # Enhanced error message with debugging information
+        error_details = {
+            "message": "Frontend not available",
+            "static_files_dir": str(STATIC_FILES_BASE_DIR) if STATIC_FILES_BASE_DIR else "Not set",
+            "static_files_exists": STATIC_FILES_BASE_DIR.exists() if STATIC_FILES_BASE_DIR else False,
+            "index_html_path": str(STATIC_INDEX_HTML) if STATIC_INDEX_HTML else "Not set",
+            "index_html_exists": STATIC_INDEX_HTML.exists() if STATIC_INDEX_HTML else False,
+            "is_docker": IS_RUNNING_IN_DOCKER,
+            "current_working_dir": str(pathlib.Path.cwd()),
+            "requested_path": full_path
+        }
+
+        detail_message = f"Frontend index.html not found at {STATIC_INDEX_HTML}."
+
+        if not IS_RUNNING_IN_DOCKER:
+            detail_message += " Ensure the frontend has been built (e.g., `npm run build` in `theseus-ui` directory)."
+
+        print(f"ERROR: Frontend serving failed. Details: {error_details}")
+        raise HTTPException(status_code=404, detail=detail_message)
+
+def cleanup_old_media_files(max_age_days: int = 30):
+    """
+    Clean up old podcast and visualization files that are older than max_age_days.
+    This preserves database records but removes actual media files to save disk space.
+    """
+    try:
+        cutoff_date = datetime.now() - timedelta(days=max_age_days)
+        total_deleted = 0
+        total_size_freed = 0
+
+        # Directories to clean
+        cleanup_dirs = [
+            "data/podcasts",
+            "data/visualizations",
+            "data/temp"  # Also clean temp files
+        ]
+
+        for base_dir in cleanup_dirs:
+            if not os.path.exists(base_dir):
+                continue
+
+            print(f"INFO:     Cleaning up old files in {base_dir}...")
+            dir_deleted = 0
+            dir_size_freed = 0
+
+            # Walk through all subdirectories and files
+            for root, dirs, files in os.walk(base_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    try:
+                        # Get file modification time
+                        file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
+
+                        # Check if file is older than cutoff
+                        if file_mtime < cutoff_date:
+                            file_size = os.path.getsize(file_path)
+                            os.remove(file_path)
+
+                            dir_deleted += 1
+                            dir_size_freed += file_size
+                            print(f"INFO:     Deleted old file: {file_path} (age: {(datetime.now() - file_mtime).days} days)")
+
+                    except Exception as e:
+                        print(f"Warning: Could not delete file {file_path}: {e}")
+                        continue
+
+            # Clean up empty directories after file deletion
+            try:
+                for root, dirs, files in os.walk(base_dir, topdown=False):
+                    for dir_name in dirs:
+                        dir_path = os.path.join(root, dir_name)
+                        try:
+                            # Only remove if directory is empty and not the base directory
+                            if not os.listdir(dir_path) and dir_path != base_dir:
+                                os.rmdir(dir_path)
+                                print(f"INFO:     Removed empty directory: {dir_path}")
+                        except Exception as e:
+                            # Directory not empty or other error, skip
+                            continue
+            except Exception as e:
+                print(f"Warning: Error during directory cleanup in {base_dir}: {e}")
+
+            total_deleted += dir_deleted
+            total_size_freed += dir_size_freed
+
+            if dir_deleted > 0:
+                size_mb = dir_size_freed / (1024 * 1024)
+                print(f"INFO:     Cleaned {dir_deleted} files from {base_dir}, freed {size_mb:.2f} MB")
+
+        if total_deleted > 0:
+            total_size_mb = total_size_freed / (1024 * 1024)
+            print(f"INFO:     Total cleanup: {total_deleted} files deleted, {total_size_mb:.2f} MB freed")
+        else:
+            print(f"INFO:     No old files found to clean up (older than {max_age_days} days)")
+
+    except Exception as e:
+        print(f"ERROR: Failed to run media file cleanup: {e}")
+        # Don't raise the error - we don't want cleanup failure to prevent API startup

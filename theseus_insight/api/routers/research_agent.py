@@ -202,7 +202,7 @@ def _mark_orphaned_research_tasks_as_failed():
 
 
 # Mark orphaned tasks as failed on startup
-_mark_orphaned_research_tasks_as_failed()
+# Recovery is explicit; importing a router must never mutate active runs.
 
 
 async def get_research_workflow() -> ResearchAgentWorkflow:
@@ -401,18 +401,6 @@ async def start_research_task(
             "progress": {"status": "Task created and queued for execution"}
         }
         
-        # Create task in general tasks table for job history
-        TaskRepository.insert_task(
-            task_id=task_id,
-            task_type=f"research-agent-{effective_mode}",
-            status="pending",
-            config_json={"mode": effective_mode, "config": request.config or {}},
-            start_time=created_at.isoformat(),
-            progress=0.0,
-            current_step="Initializing research workflow",
-            message=f"Research task created for {effective_mode}-agent mode"
-        )
-        
         # Create specific research run entry for Research Library
         ResearchRunRepository.insert_research_run(
             task_id=task_id,
@@ -421,24 +409,22 @@ async def start_research_task(
             config={"mode": effective_mode, "config": request.config or {}},
             save_to_library=request.save_to_library
         )
-        
-        # Start the research task in the background based on mode
-        if effective_mode == "multi":
-            background_tasks.add_task(
-                _run_multi_agent_research_task,
-                task_id,
-                request.research_question,
-                request.config,
-                request.save_to_library
-            )
-        else:
-            background_tasks.add_task(
-                _run_single_agent_research_task,
-                task_id,
-                request.research_question,
-                request.config,
-                request.save_to_library
-            )
+
+        # Create task in general tasks table for job history
+        TaskRepository.insert_task(
+            task_id=task_id,
+            task_type=f"research-agent-{effective_mode}",
+            status="pending",
+            config_json={"mode": effective_mode, "config": request.config or {}, "research_question": request.research_question, "save_to_library": request.save_to_library},
+            start_time=created_at.isoformat(),
+            progress=0.0,
+            current_step="Initializing research workflow",
+            message=f"Research task created for {effective_mode}-agent mode"
+        )
+
+        from ..tasks import task_manager
+        from ..task_handlers.recoverable import run_research_task
+        await task_manager.enqueue_task(run_research_task, task_id)
         
         logger.info(f"Started {effective_mode}-agent research task {task_id} for question: {request.research_question[:100]}")
         
@@ -1155,4 +1141,4 @@ async def health_check() -> Dict[str, str]:
         "timestamp": _convert_datetime_to_string(datetime.utcnow()),
         "dual_mode_ready": True,
         "current_mode": SettingsRepository.get_research_agent_mode()
-    } 
+    }

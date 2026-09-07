@@ -439,7 +439,7 @@ export const settingsApi = {
   updateEmailRecipients: (data: any) => api.put('/settings/email-recipients', data),
   getVisualizerSettings: () => api.get('/settings/visualizer-settings'),
   sendTestEmail: () => api.post('/settings/send-test-email'),
-  getCredentials: () => api.get('/settings/credentials'),
+  getCredentials: () => api.get<Record<string, { configured: boolean; value: string }>>('/settings/credentials'),
   updateCredentials: (data: any) => api.put('/settings/credentials', data),
   getModelProviders: () => api.get('/model-providers'),
   getModels: () => api.get('/models'),
@@ -1309,7 +1309,11 @@ export const papersApi = {
         minScore?: number,
         maxScore?: number,
         fromDate?: string,
-        toDate?: string
+        toDate?: string,
+        profileIds?: number[],
+        minProfileScore?: number,
+        maxProfileScore?: number,
+        profileRelated?: boolean
     ): Promise<HybridSearchResponse> => {
         const requestBody = {
             query_text: queryText,
@@ -1321,7 +1325,11 @@ export const papersApi = {
             min_score: minScore,
             max_score: maxScore,
             from_date: fromDate,
-            to_date: toDate
+            to_date: toDate,
+            profile_ids: profileIds,
+            min_profile_score: minProfileScore,
+            max_profile_score: maxProfileScore,
+            profile_related: profileRelated
         };
 
         const response: AxiosResponse<HybridSearchResponse> = await api.post<HybridSearchResponse>('/papers/hybrid-search', requestBody);
@@ -1639,4 +1647,14 @@ export const performanceApi = {
     const response = await api.post('/trends/performance-config', config);
     return response.data;
   },
-}; 
+};
+
+export const runtimeApi = {
+  diagnostics: (taskId: string) => api.get<{
+    events: { stage: string; status: string; duration_ms: number | null; error_type: string | null; created_at: string }[];
+    deliveries: { status: string; updated_at: string }[];
+    task?: { status: string; current_step: string | null; message: string | null; error: string | null };
+  }>(`/tasks/${encodeURIComponent(taskId)}/diagnostics`),
+  retry: (taskId: string) => api.post(`/tasks/${encodeURIComponent(taskId)}/retry`),
+  resolveDelivery: (taskId: string, resolution: 'sent' | 'retry') => api.post(`/tasks/${encodeURIComponent(taskId)}/delivery-resolution`, null, { params: { resolution } }),
+};

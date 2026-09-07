@@ -286,8 +286,11 @@ class GmailCommunication:
             print("Logged in successfully")
 
         message_text = message.as_string()
+        self._smtp_submission_started = True
         if recipients:
-            session.sendmail(sender_address, [sender_address] + recipients, message_text)
+            refused = session.sendmail(sender_address, [sender_address] + recipients, message_text)
+            if refused:
+                raise RuntimeError("Partial SMTP delivery; review recipients before retrying")
             if self.verbose:
                 print("Successfully sent email to all BCC recipients via SMTP")
         else:
@@ -295,7 +298,10 @@ class GmailCommunication:
             if self.verbose:
                 print("Successfully sent email to sender via SMTP")
 
-        session.quit()
+        try:
+            session.quit()
+        except Exception:
+            session.close()
         if self.verbose:
             print("SMTP session closed")
 
@@ -320,10 +326,13 @@ class GmailCommunication:
 
     def _send_with_fallback(self, message: MIMEMultipart, recipients: list[str] | None):
         smtp_error = None
+        self._smtp_submission_started = False
         try:
             self._send_via_smtp(message, recipients)
             return
         except Exception as exc:  # noqa: BLE001
+            if self._smtp_submission_started:
+                raise RuntimeError("SMTP submission outcome uncertain; automatic fallback suppressed to prevent duplicate delivery") from exc
             smtp_error = exc
             if self.verbose:
                 print(f"SMTP delivery failed, trying Gmail API fallback: {exc}")

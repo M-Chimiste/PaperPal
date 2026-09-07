@@ -11,7 +11,7 @@ services:
   db:
     ports:
       # Expose PostgreSQL port for external access
-      - "5433:5432"  # Maps host port 5433 to container port 5432
+      - "127.0.0.1:5433:5432"  # Maps host port 5433 to container port 5432
     volumes:
       # Ensure all database initialization scripts are available
       - postgres_data:/var/lib/postgresql/data

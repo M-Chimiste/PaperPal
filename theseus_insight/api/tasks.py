@@ -1,6 +1,9 @@
 from typing import Dict, Optional, List
 import asyncio
 import json
+import uuid
+import time
+import logging
 from datetime import datetime
 from enum import Enum
 from .models import RunStatus, NodeStatus
@@ -25,31 +28,10 @@ class TaskManager:
         self.general_worker_task: Optional[asyncio.Task] = None
         self.visualizer_worker_task: Optional[asyncio.Task] = None
 
-        # Mark any interrupted tasks as failed on startup
-        self._mark_interrupted_tasks_as_failed()
-
-        # Clean up old tasks on startup
-        self._cleanup_old_tasks(days_old=7)
-
-    def _mark_interrupted_tasks_as_failed(self):
-        """Mark interrupted tasks as failed using repository pattern."""
-        # Get all pending/processing tasks and mark them as failed
-        try:
-            active_tasks = TaskRepository.get_active_tasks()
-            current_time = datetime.now().isoformat()
-            
-            for task in active_tasks:
-                TaskRepository.update_task_status(
-                    task_id=task['task_id'],
-                    status="failed",
-                    progress=0.0,
-                    current_step="interrupted",
-                    message="Task was interrupted by server restart",
-                    error="Task was interrupted by server restart",
-                    end_time=current_time
-                )
-        except Exception as e:
-            print(f"Error marking interrupted tasks as failed: {e}")
+        self.owner = str(uuid.uuid4())
+        self._handlers = {}
+        self._stopping = False
+        self._abandoned_claims = []
 
     def _cleanup_old_tasks(self, days_old: int = 7):
         """Clean up old tasks using repository pattern."""
@@ -70,48 +52,98 @@ class TaskManager:
             print(f"Error cleaning up old tasks: {e}")
 
     async def start_worker(self) -> None:
-        """Start the background workers that process queued tasks."""
+        self._stopping = False
         if self.general_worker_task is None or self.general_worker_task.done():
-            print("INFO:     Starting general task worker")
-            self.general_worker_task = asyncio.create_task(self._worker(self.general_task_queue))
+            self.general_worker_task = asyncio.create_task(self._worker("general"))
         if self.visualizer_worker_task is None or self.visualizer_worker_task.done():
-            print("INFO:     Starting visualizer task worker")
-            self.visualizer_worker_task = asyncio.create_task(self._worker(self.visualizer_queue))
+            self.visualizer_worker_task = asyncio.create_task(self._worker("visualizer"))
 
     async def stop_worker(self) -> None:
-        """Stop the background workers gracefully."""
-        if self.general_worker_task:
-            await self.general_task_queue.put(None)
-            await self.general_worker_task
-            self.general_worker_task = None
-        if self.visualizer_worker_task:
-            await self.visualizer_queue.put(None)
-            await self.visualizer_worker_task
-            self.visualizer_worker_task = None
+        # Drain running handlers before releasing ownership: cancelling to_thread
+        # does not stop its underlying inference/email thread.
+        self._stopping = True
+        workers = [w for w in (self.general_worker_task, self.visualizer_worker_task) if w]
+        if workers:
+            await asyncio.gather(*workers)
+        self.general_worker_task = self.visualizer_worker_task = None
 
-    async def _worker(self, queue: asyncio.Queue) -> None:
-        """Continuously process tasks from the given queue."""
+    async def _heartbeat(self, task_id):
+        from ..data_access.runtime import DispatchRepository
         while True:
-            item = await queue.get()
-            if item is None:
-                queue.task_done()
-                break
-            func, task_id = item
+            await asyncio.sleep(10)
+            await asyncio.to_thread(DispatchRepository.renew, task_id, self.owner)
+
+    async def _worker(self, queue):
+        from ..data_access.runtime import DispatchRepository, record_event
+        logger = logging.getLogger(__name__)
+        while not self._stopping:
             try:
-                await func(task_id)
-            except Exception as e:
-                print(f"Error processing task {task_id}: {e}")
-                import traceback
-                traceback.print_exc()
-            finally:
-                queue.task_done()
+                candidates = await asyncio.to_thread(DispatchRepository.candidates, queue)
+                for task_id in candidates:
+                    if self._stopping:
+                        break
+                    claim = DispatchRepository.claim(task_id, self.owner)
+                    dispatch = await asyncio.to_thread(claim.__enter__)
+                    abandoned = False
+                    try:
+                        if not dispatch:
+                            continue
+                        heartbeat = asyncio.create_task(self._heartbeat(task_id))
+                        started = time.monotonic()
+                        try:
+                            task = await asyncio.to_thread(TaskRepository.get_task, task_id)
+                            if task['status'] in {'completed', 'failed', 'cancelled', 'canceled'}:
+                                continue
+                            handler = self._handlers.get(dispatch['handler'])
+                            if handler is None:
+                                from .task_handlers import HANDLERS
+                                registered = HANDLERS.get(dispatch['handler'])
+                                if registered:
+                                    async def handler(tid):
+                                        await registered(self, tid)
+                            if handler is None:
+                                raise RuntimeError('Handler cannot be recovered; restart this operation from its page')
+                            if dispatch['attempts'] > 1 and dispatch['handler'] not in {'newsletter', 'custom_newsletter', 'profile_newsletter', 'bulk_embed', 'profile_aware_ingest', 'star-map'}:
+                                raise RuntimeError('Interrupted operation needs explicit review before retry')
+                            await record_async(task_id, 'dispatch', 'started', details={'attempt': dispatch['attempts'], 'owner': self.owner})
+                            await handler(task_id)
+                        except asyncio.CancelledError:
+                            # Cancelling an async handler does not stop its blocking
+                            # worker thread. Retain the lock until process exit so
+                            # another instance cannot execute concurrently.
+                            abandoned = True
+                            self._abandoned_claims.append(claim)
+                            raise
+                        except Exception as exc:
+                            logger.exception('Task failed: %s', task_id)
+                            await self.update_task_status(task_id, TaskStatus.FAILED,
+                                message='Task failed; inspect diagnostics and retry', error=str(exc), current_step='failed')
+                            await record_async(task_id, 'dispatch', 'failed', error_type=type(exc).__name__)
+                        finally:
+                            heartbeat.cancel()
+                            await asyncio.gather(heartbeat, return_exceptions=True)
+                            await record_async(task_id, 'dispatch', 'finished', duration_ms=(time.monotonic()-started)*1000)
+                            if not abandoned:
+                                await asyncio.to_thread(DispatchRepository.finish, task_id, self.owner)
+                    finally:
+                        if not abandoned:
+                            await asyncio.to_thread(claim.__exit__, None, None, None)
+                await asyncio.sleep(0.5)
+            except Exception:
+                logger.exception('Dispatch polling failed')
+                await asyncio.sleep(2)
 
     async def enqueue_task(self, func, task_id: str, visualizer: bool = False) -> None:
-        """Add a new task to the appropriate processing queue."""
-        queue = self.visualizer_queue if visualizer or func == self.run_visualizer_task else self.general_task_queue
-        await queue.put((func, task_id))
-        
-        # Ensure workers are still running
+        from ..data_access.runtime import DispatchRepository
+        name = getattr(func, '__name__', '')
+        handler = name.removeprefix('run_').removesuffix('_task')
+        if name == 'run_profile_star_map_task':
+            handler = 'star-map'
+        if name == '<lambda>':
+            handler = 'local:' + task_id
+        self._handlers[handler] = func
+        queue = 'visualizer' if visualizer or handler == 'visualizer' else 'general'
+        await asyncio.to_thread(DispatchRepository.enqueue, task_id, handler, queue)
         await self.start_worker()
 
     async def cleanup(self):
@@ -154,8 +186,10 @@ class TaskManager:
         
     async def create_task(self, task_id: str, task_type: str, config: dict):
         """Create a new task."""
-        print(f"[DEBUG] Creating task {task_id} with config: {config}")
+        logging.getLogger(__name__).info("Creating task %s (%s)", task_id, task_type)
         start_time = datetime.now().isoformat()
+        from fastapi.encoders import jsonable_encoder
+        config = jsonable_encoder(config)
         
         # Store task in database using repository (run in thread to avoid blocking event loop)
         await asyncio.to_thread(
@@ -181,7 +215,9 @@ class TaskManager:
     async def subscribe_to_updates(self, task_id: str) -> asyncio.Queue:
         """Subscribe to status updates for a task."""
         if task_id not in self.status_updates:
-            raise ValueError(f"Task {task_id} not found")
+            if not await asyncio.to_thread(TaskRepository.get_task, task_id):
+                raise ValueError(f"Task {task_id} not found")
+            self.status_updates[task_id] = []
             
         queue = asyncio.Queue()
         self.status_updates[task_id].append(queue)
@@ -225,7 +261,7 @@ class TaskManager:
         
         # Handle graceful completion: if task is already completed/failed, don't overwrite unless it's an error
         existing_status = task.get('status', '')
-        if existing_status in ['completed', 'failed'] and status == TaskStatus.COMPLETED:
+        if existing_status in ['completed', 'failed', 'cancelled', 'canceled'] and status in {TaskStatus.COMPLETED, TaskStatus.PROCESSING}:
             # Task already completed, just return without error
             print(f"Task {task_id} already marked as {existing_status}, skipping duplicate completion")
             return
@@ -437,5 +473,13 @@ class TaskManager:
 
 
 
+async def record_async(*args, **kwargs):
+    from ..data_access.runtime import record_event
+    try:
+        await asyncio.to_thread(record_event, *args, **kwargs)
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to persist task diagnostics")
+
+
 # Create global task manager instance
-task_manager = TaskManager() 
+task_manager = TaskManager()

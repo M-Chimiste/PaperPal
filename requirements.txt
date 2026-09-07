@@ -1,5 +1,7 @@
 # Core ML & Deep Learning
 torch
+torchvision
+torchaudio
 # Transformers 5.9+ regressed RT-DETR-v2 on Apple MPS by allocating float64
 # tensors on-device. Docling's layout model uses this path, so retain the last
 # MPS-compatible implementation until the upstream fix is released.
@@ -34,7 +36,7 @@ yake
 # LLM & AI Services
 # LLMFactory - Unified inference interface for multiple providers
 # v0.2.4 includes LM Studio singleton handling fix
-git+https://github.com/M-Chimiste/LLMFactory.git
+llmfactory @ git+https://github.com/M-Chimiste/LLMFactory.git@1eb5d0d6b3107e2267552f40ba32810b63859d1b
 anthropic[bedrock]
 openai
 ollama
@@ -78,3 +80,6 @@ asyncpg
 
 # System monitoring
 psutil>=5.9.0
+
+# Credential encryption
+cryptography

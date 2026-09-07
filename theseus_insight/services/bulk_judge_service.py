@@ -1,3 +1,4 @@
+from ..workers.ownership import worker_environment
 """Bulk-judge job orchestration: submission, multi-server worker launch,
 monitoring, signals, and conflict checks (extracted from the
 bulk_operations router in refactor B7).
@@ -156,7 +157,7 @@ async def _launch_single_worker(
     try:
         # Build the command to run the worker
         cmd = [
-            'conda', 'run', '-n', conda_env, 'python', '-m', 'theseus_insight.workers.judge_worker',
+            sys.executable, '-m', 'theseus_insight.workers.judge_worker',
             '--job-id', str(job_id),
             '--server-url', server_url,
             '--provider', provider,  # Use the server's configured provider (ollama/lmstudio)
@@ -179,6 +180,7 @@ async def _launch_single_worker(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=os.getcwd(),
+            env=worker_environment(),
             start_new_session=True  # Detach from parent process
         )
         
@@ -250,7 +252,7 @@ async def _launch_worker_processes(job_id: UUID, selected_servers, request_timeo
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                         cwd=os.getcwd(),
-                        env=os.environ.copy()
+                        env=worker_environment()
                     )
 
                     print(f"✅ Launched worker process for server {server.name} (PID: {process.pid})")

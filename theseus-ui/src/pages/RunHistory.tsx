@@ -1,3 +1,4 @@
+import TaskDiagnostics from '../components/TaskDiagnostics';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     Box, 
@@ -213,6 +214,7 @@ const RunHistory: React.FC = () => {
                                             <TableCell>{task.start_time}</TableCell>
                                             <TableCell>{formatTaskType(task.task_type)}</TableCell>
                                             <TableCell align="center">
+                                                <TaskDiagnostics taskId={task.task_id} failed={task.status.toLowerCase() === "failed"} onRetry={() => { void fetchTasks(); }} />
                                                 {isTaskInProgress(task.status) && (
                                                     <Tooltip title="Abort Task">
                                                         <IconButton 
@@ -282,4 +284,4 @@ const RunHistory: React.FC = () => {
     );
 };
 
-export default RunHistory; 
+export default RunHistory;

@@ -1,0 +1,336 @@
+{
+  "version": 1,
+  "judgment_scope": "Developer-curated foundational ML retrieval benchmark; validate against personal profiles before production tuning.",
+  "corpus": [
+    {
+      "id": "attention",
+      "title": "Attention Is All You Need",
+      "summary": "Self attention transformer sequence modeling replaces recurrence with parallel attention.",
+      "url": "https://arxiv.org/abs/1706.03762"
+    },
+    {
+      "id": "bert",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "summary": "Masked language modeling and next sentence prediction pretrain bidirectional transformer representations.",
+      "url": "https://arxiv.org/abs/1810.04805"
+    },
+    {
+      "id": "rag",
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "summary": "A retriever supplies external passages to a generator for knowledge intensive question answering.",
+      "url": "https://arxiv.org/abs/2005.11401"
+    },
+    {
+      "id": "dpr",
+      "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+      "summary": "Dual encoders retrieve dense passage vectors for open domain question answering.",
+      "url": "https://arxiv.org/abs/2004.04906"
+    },
+    {
+      "id": "lora",
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "summary": "Low rank trainable matrices adapt frozen language model weights with fewer parameters.",
+      "url": "https://arxiv.org/abs/2106.09685"
+    },
+    {
+      "id": "gcn",
+      "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+      "summary": "Graph convolution aggregates neighborhood information for semi supervised node classification.",
+      "url": "https://arxiv.org/abs/1609.02907"
+    },
+    {
+      "id": "clip",
+      "title": "Learning Transferable Visual Models From Natural Language Supervision",
+      "summary": "Contrastive image and text training learns transferable visual representations with natural language supervision.",
+      "url": "https://arxiv.org/abs/2103.00020"
+    },
+    {
+      "id": "diffusion",
+      "title": "Denoising Diffusion Probabilistic Models",
+      "summary": "Denoising diffusion learns to reverse gradual noise corruption for image generation.",
+      "url": "https://arxiv.org/abs/2006.11239"
+    },
+    {
+      "id": "flash",
+      "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+      "summary": "Tiled exact attention reduces memory reads and writes to improve accelerator efficiency.",
+      "url": "https://arxiv.org/abs/2205.14135"
+    },
+    {
+      "id": "whisper",
+      "title": "Robust Speech Recognition via Large-Scale Weak Supervision",
+      "summary": "Large scale weakly supervised speech recognition transfers across languages and audio conditions.",
+      "url": "https://arxiv.org/abs/2212.04356"
+    }
+  ],
+  "cases": [
+    {
+      "id": "attention-1",
+      "query": "Which paper introduced transformer self attention without recurrence?",
+      "relevant_ids": [
+        "attention"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "attention-2",
+      "query": "What architecture replaces recurrent sequence models with attention?",
+      "relevant_ids": [
+        "attention"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "attention-3",
+      "query": "Find foundational work on parallel attention for sequence modeling.",
+      "relevant_ids": [
+        "attention"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "bert-1",
+      "query": "How can masked language modeling pretrain bidirectional representations?",
+      "relevant_ids": [
+        "bert"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "bert-2",
+      "query": "Which model uses next sentence prediction and masked tokens?",
+      "relevant_ids": [
+        "bert"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "bert-3",
+      "query": "Find BERT pretraining for language understanding.",
+      "relevant_ids": [
+        "bert"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "rag-1",
+      "query": "How can retrieval supply external knowledge to a text generator?",
+      "relevant_ids": [
+        "rag"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "rag-2",
+      "query": "Find retrieval augmented generation for knowledge intensive question answering.",
+      "relevant_ids": [
+        "rag"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "rag-3",
+      "query": "Which approach combines document retrieval with a pretrained generator?",
+      "relevant_ids": [
+        "rag"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "dpr-1",
+      "query": "How do dual encoders retrieve passages for open domain questions?",
+      "relevant_ids": [
+        "dpr"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "dpr-2",
+      "query": "Find dense passage retrieval for question answering.",
+      "relevant_ids": [
+        "dpr"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "dpr-3",
+      "query": "Which retrieval method represents questions and passages as dense vectors?",
+      "relevant_ids": [
+        "dpr"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "lora-1",
+      "query": "How can low rank matrices adapt frozen language model weights?",
+      "relevant_ids": [
+        "lora"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "lora-2",
+      "query": "Find parameter efficient language model adaptation with LoRA.",
+      "relevant_ids": [
+        "lora"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "lora-3",
+      "query": "Which fine tuning technique adds low rank trainable updates?",
+      "relevant_ids": [
+        "lora"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "gcn-1",
+      "query": "How can graph convolution classify nodes with few labels?",
+      "relevant_ids": [
+        "gcn"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "gcn-2",
+      "query": "Find semi supervised graph convolutional networks.",
+      "relevant_ids": [
+        "gcn"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "gcn-3",
+      "query": "Which graph method aggregates neighbors for node classification?",
+      "relevant_ids": [
+        "gcn"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "clip-1",
+      "query": "How does contrastive image text training enable transferable vision models?",
+      "relevant_ids": [
+        "clip"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "clip-2",
+      "query": "Find CLIP natural language supervision for visual representations.",
+      "relevant_ids": [
+        "clip"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "clip-3",
+      "query": "Which vision model learns by matching images and text?",
+      "relevant_ids": [
+        "clip"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "diffusion-1",
+      "query": "How do diffusion models reverse noise corruption to generate images?",
+      "relevant_ids": [
+        "diffusion"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "diffusion-2",
+      "query": "Find denoising diffusion probabilistic models.",
+      "relevant_ids": [
+        "diffusion"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "diffusion-3",
+      "query": "Which generative method learns an iterative denoising process?",
+      "relevant_ids": [
+        "diffusion"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "flash-1",
+      "query": "How can tiled attention reduce accelerator memory traffic?",
+      "relevant_ids": [
+        "flash"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "flash-2",
+      "query": "Find memory efficient exact attention with IO awareness.",
+      "relevant_ids": [
+        "flash"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "flash-3",
+      "query": "Which attention algorithm optimizes reads and writes without approximation?",
+      "relevant_ids": [
+        "flash"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "whisper-1",
+      "query": "How does large scale weak supervision improve robust speech recognition?",
+      "relevant_ids": [
+        "whisper"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "whisper-2",
+      "query": "Find Whisper multilingual automatic speech recognition.",
+      "relevant_ids": [
+        "whisper"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "whisper-3",
+      "query": "Which speech recognition work studies transfer from weakly labeled audio?",
+      "relevant_ids": [
+        "whisper"
+      ],
+      "split": "holdout"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "retrieval",
+      "interests": "retrieval, grounded generation, question answering",
+      "relevant_ids": [
+        "rag",
+        "dpr"
+      ]
+    },
+    {
+      "id": "efficient_models",
+      "interests": "efficient training and inference for language models",
+      "relevant_ids": [
+        "lora",
+        "flash",
+        "attention"
+      ]
+    },
+    {
+      "id": "multimodal",
+      "interests": "vision, audio and cross-modal representation learning",
+      "relevant_ids": [
+        "clip",
+        "diffusion",
+        "whisper"
+      ]
+    }
+  ]
+}

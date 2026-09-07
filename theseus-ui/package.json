@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:api": "openapi-typescript openapi.json -o src/services/generated/schema.d.ts"
+    "generate:api": "openapi-typescript openapi.json -o src/services/generated/schema.d.ts",
+    "lint:check": "node ../scripts/check_lint.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

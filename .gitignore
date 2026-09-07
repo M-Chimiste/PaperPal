@@ -536,3 +536,5 @@ CLAUDE.md
 AGENTS.md
 *secret.json
 *token.json
+# Local verification cache
+.cache/

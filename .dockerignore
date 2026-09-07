@@ -12,6 +12,7 @@ dist/
 # venv
 .env
 .venv
+.cache/
 env/
 venv/
 ENV/
@@ -38,6 +39,8 @@ coverage/
 
 # Logs and databases (if not intended to be part of the image, handled by volumes)
 *.log
+data/
+/theseus-ui/dist/
 # data/papers.db # We want the schema in the image, but not local data. Volume handles runtime data.
 # However, if data dir is entirely volume-managed, we can ignore it.
 # For now, let's assume an empty data directory is copied and then volume mounted.
@@ -51,4 +54,4 @@ docker-compose.yml
 .gitignore
 
 # Temp files from populate/clear scripts if any residual
-*.sqlite3-journal 
+*.sqlite3-journal

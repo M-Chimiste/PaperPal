@@ -132,10 +132,9 @@ async def run_newsletter_pipeline_endpoint(
 
     # Business logic lives in services/newsletter_run_service.py (B7);
     # this endpoint keeps only validation (above) and enqueueing.
-    await task_manager.enqueue_task(
-        lambda _tid: newsletter_run_service.run_custom_newsletter(params, task_id, loop),
-        task_id,
-    )
+    await task_manager.create_task(task_id, "custom_newsletter", params.model_dump(mode="json"))
+    from ..task_handlers.recoverable import run_custom_newsletter_task
+    await task_manager.enqueue_task(run_custom_newsletter_task, task_id)
     return {"task_id": task_id, "message": "Newsletter generation process has been initiated."}
 
 # Podcast endpoints
@@ -377,4 +376,4 @@ async def update_podcast_title(podcast_id: int, title_data: dict):
         raise
     except Exception as e:
         print(f"Error updating podcast title (ID: {podcast_id}): {e}")
-        raise HTTPException(status_code=500, detail=f"An internal server error occurred while updating podcast title for ID {podcast_id}.") 
+        raise HTTPException(status_code=500, detail=f"An internal server error occurred while updating podcast title for ID {podcast_id}.")

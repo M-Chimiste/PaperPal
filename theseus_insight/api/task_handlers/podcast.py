@@ -24,7 +24,7 @@ async def run(task_manager: "TaskManager", task_id: str):
         task = TaskRepository.get_task(task_id)
         if not task:
             raise ValueError(f"Task {task_id} not found")
-        config = task["config"]
+        config = task["config_json"]
 
         # Initialize podcast generator
         # The text_model parameter expects the entire model configuration dictionary.

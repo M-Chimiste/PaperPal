@@ -16,10 +16,33 @@ class TheseusScheduler:
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
         self.is_running = False
+        self.standby = False
+        self._leadership_conn = None
+        self._leadership_monitor = None
+        self._stopped = False
 
     async def start(self):
         """Start the scheduler."""
+        self._stopped = False
+        if self._leadership_monitor is None:
+            self._leadership_monitor = asyncio.create_task(self._wait_for_leadership())
         if not self.is_running:
+            from .db import DATABASE_URL
+            import psycopg
+            def acquire():
+                conn = psycopg.connect(DATABASE_URL, autocommit=True)
+                acquired = conn.execute("SELECT pg_try_advisory_lock(hashtextextended('theseus:scheduler', 0))").fetchone()[0]
+                if not acquired:
+                    conn.close()
+                    return None
+                return conn
+            self._leadership_conn = await asyncio.to_thread(acquire)
+            if self._leadership_conn is None:
+                self.standby = True
+                if self._leadership_monitor is None:
+                    self._leadership_monitor = asyncio.create_task(self._wait_for_leadership())
+                return
+            self.standby = False
             logger.info("🚀 Starting Theseus Scheduler...")
 
             # Schedule weekly cleanup at 3 AM on Sundays
@@ -58,12 +81,39 @@ class TheseusScheduler:
             # Sync user-configured scheduled tasks from database
             await self._sync_scheduled_tasks()
             
+    async def _wait_for_leadership(self):
+        while not self._stopped:
+            await asyncio.sleep(5)
+            try:
+                if self._leadership_conn:
+                    await asyncio.to_thread(self._leadership_conn.execute, 'SELECT 1')
+                else:
+                    await self.start()
+            except Exception:
+                logger.exception('Scheduler leadership lost; pausing scheduled work')
+                if self.is_running:
+                    self.scheduler.shutdown(wait=False)
+                self.is_running = False
+                self.standby = True
+                if self._leadership_conn:
+                    await asyncio.to_thread(self._leadership_conn.close)
+                self._leadership_conn = None
+
     async def stop(self):
         """Stop the scheduler."""
+        self._stopped = True
+        self.standby = False
+        if self._leadership_monitor:
+            self._leadership_monitor.cancel()
+            await asyncio.gather(self._leadership_monitor, return_exceptions=True)
+            self._leadership_monitor = None
         if self.is_running:
             self.scheduler.shutdown(wait=False)
             self.is_running = False
             logger.info("Theseus Scheduler stopped")
+        if self._leadership_conn:
+            await asyncio.to_thread(self._leadership_conn.close)
+            self._leadership_conn = None
 
     async def _run_weekly_cleanup(self):
         """
@@ -136,25 +186,13 @@ class TheseusScheduler:
                     
                     for job in long_running_jobs:
                         logger.warning(
-                            f"Marking stuck job as failed: {job['job_type']} "
+                            f"Long-running job: {job['job_type']} "
                             f"(ID: {job['id']}, Running for: {job['hours_running']:.1f} hours)"
                         )
                     
-                    # Mark them as failed
-                    result = await conn.execute(
-                        """
-                        UPDATE processing_jobs 
-                        SET status = 'failed',
-                            error_message = 'Job stuck - automatically cancelled after running > 4 hours with no completion',
-                            completed_at = NOW()
-                        WHERE status IN ('running', 'pending')
-                        AND job_type IN ('newsletter_generation', 'mindmap_generation', 'podcast_generation')
-                        AND EXTRACT(EPOCH FROM (NOW() - started_at))/3600 > 4
-                        """
-                    )
-                    
-                    jobs_cleaned = int(result.split()[-1]) if result and result.startswith('UPDATE') else 0
-                    logger.info(f"✅ Marked {jobs_cleaned} stuck jobs as failed")
+                    # Age is not proof of abandoned ownership. Recovery is
+                    # performed by dispatch leases; legacy jobs need review.
+                    logger.warning("Long-running jobs require inspection; no unowned state was mutated")
                 else:
                     logger.info("✅ No stuck jobs found")
             
@@ -319,4 +357,4 @@ class TheseusScheduler:
             # Don't fail startup if sync fails
 
 # Global scheduler instance
-scheduler = TheseusScheduler() 
+scheduler = TheseusScheduler()

@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: theseus_insight_service
     ports:
-      - "8000:8000" # Maps host port 8000 to container port 8000
+      - "127.0.0.1:8000:8000" # Maps host port 8000 to container port 8000
     env_file:
       - .env # Loads environment variables from .env file in the project root
     volumes:
@@ -15,12 +15,12 @@ services:
       # Optional: If you want to live-reload backend code changes during development (not for production)
       # - ./theseus_insight:/app/theseus_insight
       # - ./main.py:/app/main.py
-      # - ./config:/app/config 
+      # - ./config:/app/config
       # Note: For live-reloading frontend, a different setup (e.g. running Vite dev server and proxying from FastAPI) is usually needed.
     environment:
-      # You can also define environment variables directly here, 
+      # You can also define environment variables directly here,
       # though .env file is generally preferred for sensitive or numerous variables.
-      # Example: 
+      # Example:
       # - OPENAI_API_KEY=${OPENAI_API_KEY_FROM_HOST_ENV} # If you want to pass from host env differently
       - DATABASE_URL=postgresql://theseus:theseus@db:5432/theseusdb
       - PYTHONUNBUFFERED=1 # Already set in Dockerfile, but good to be explicit if needed
@@ -28,12 +28,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # healthcheck: # Optional: Add a healthcheck for your FastAPI app
-    #   test: ["CMD", "curl", "--fail", "http://localhost:8000/api/settings/model-providers"] # Example endpoint
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 30s # Give some time for the app to start
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
 
   db:
     image: pgvector/pgvector:pg14

@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: theseus
       POSTGRES_DB: theseus_test
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:

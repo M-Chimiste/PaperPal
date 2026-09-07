@@ -1,5 +1,7 @@
 """Stage 6: Send the newsletter email (extracted from run_async, B9)."""
 import datetime
+import hashlib
+import asyncio
 from typing import Callable, Optional, Tuple
 
 from ...data_access import LogsRepository
@@ -47,9 +49,14 @@ async def run(
             ti.end_date.strftime('%Y-%m-%d'),
             urls_and_titles_bulleted
         )
+        from ...data_access.runtime import DeliveryRepository
+        delivery_key = hashlib.sha256(f"newsletter:{ti.task_id}".encode()).hexdigest()
+        if not await asyncio.to_thread(DeliveryRepository.begin, delivery_key, ti.task_id):
+            return newsletter_content, sections_data
         try:
             ti.communication.compose_message(email_body, ti.start_date, ti.end_date)
-            ti.communication.send_email()
+            await asyncio.to_thread(ti.communication.send_email)
+            await asyncio.to_thread(DeliveryRepository.finish, delivery_key, "sent")
             # Log successful email
             LogsRepository.upsert(
                 task_id=ti.task_id,
@@ -57,6 +64,7 @@ async def run(
                 datetime_run=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             )
         except Exception as e:
+            await asyncio.to_thread(DeliveryRepository.finish, delivery_key, "uncertain")
             ti._log_error(500, e)
             raise
     if progress_callback and not ti.generate_podcast:

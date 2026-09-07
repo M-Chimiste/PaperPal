@@ -75,40 +75,31 @@ class SettingsRepository:
             rows = cur.fetchall()
             return {row["key"]: row["value"] for row in rows}
 
-    # Encryption helpers (mirroring PaperDatabase functionality)
     @staticmethod
     def _encrypt(plaintext: str) -> str:
-        """Encrypt a string using XOR encryption with APP_SECRET_KEY."""
-        secret = os.getenv("APP_SECRET_KEY", "default_secret").encode()
-        key = hashlib.sha256(secret).digest()
-        data = plaintext.encode()
-        enc = bytes([b ^ key[i % len(key)] for i, b in enumerate(data)])
-        return base64.b64encode(enc).decode()
+        from ..security import encrypt
+        return encrypt(plaintext)
 
     @staticmethod
     def _decrypt(ciphertext: str) -> str:
-        """Decrypt a string encrypted with _encrypt method."""
-        secret = os.getenv("APP_SECRET_KEY", "default_secret").encode()
-        key = hashlib.sha256(secret).digest()
-        data = base64.b64decode(ciphertext.encode())
-        dec = bytes([b ^ key[i % len(key)] for i, b in enumerate(data)])
-        return dec.decode()
+        from ..security import decrypt
+        return decrypt(ciphertext)
 
     @staticmethod
     def set_secret_setting(key: str, value: str) -> None:
-        """Encrypt and store a sensitive setting value."""
         SettingsRepository.set(key, SettingsRepository._encrypt(value))
 
     @staticmethod
     def get_secret_setting(key: str) -> str | None:
-        """Retrieve and decrypt a sensitive setting value."""
-        enc = SettingsRepository.get(key)
-        if enc:
-            try:
-                return SettingsRepository._decrypt(enc)
-            except Exception:
-                return None
-        return None
+        value = SettingsRepository.get(key)
+        if not value:
+            return None
+        from ..security import PREFIX
+        if not value.startswith(PREFIX) and os.getenv(key):
+            # Existing environment credentials remain usable until the operator
+            # explicitly selects the untagged legacy storage format to migrate.
+            return os.environ[key]
+        return SettingsRepository._decrypt(value)
 
     # Convenience helpers mirroring old API
 
@@ -419,4 +410,4 @@ class SettingsRepository:
                 k: v for k, v in SettingsRepository.get_effective_research_config().items() 
                 if k in ["parallel_agents", "task_timeout", "max_research_loops"]
             }
-        } 
+        }

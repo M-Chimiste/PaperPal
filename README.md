@@ -516,7 +516,7 @@ If you prefer to install manually or the automated scripts don't work for your e
    source venv/bin/activate  # On Windows: venv\Scripts\activate.bat
    
    # Install dependencies
-   pip install -r requirements.txt
+   pip install -r requirements.lock
    ```
 
 2. **Install and build frontend**
@@ -959,3 +959,7 @@ For detailed documentation and advanced usage examples, see [docs/db_migration_R
 - [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://pydantic-docs.helpmanual.io/), PostgreSQL with [pgvector](https://github.com/pgvector/pgvector) for backend processing.
 
 Theseus Insight is maintained by [M. Chimiste](https://github.com/M-Chimiste) & contributors.
+
+## Reliability and local verification
+
+See [the reliability guide](docs/reliability.md) for locked installation, the local quality gate, credential migration, authenticated access, job recovery, diagnostics, and search/evaluation commands. No GitHub workflows are required.

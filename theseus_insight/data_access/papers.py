@@ -277,6 +277,7 @@ class PaperRepository:
     def find_similar(
         query_embedding: List[float],
         *,
+        embedding_model_name: str | None = None,
         limit: int = 10,
         similarity_threshold: float = 0.7,
     ) -> List[Dict[str, Any]]:
@@ -290,12 +291,13 @@ class PaperRepository:
                     SELECT *, (1 - (embedding <=> %s::vector))::float AS similarity_score
                     FROM papers
                     WHERE embedding IS NOT NULL
+                      AND (%s::text IS NULL OR embedding_model = %s)
                       AND (1 - (embedding <=> %s::vector))::float >= %s
-                    ORDER BY similarity_score DESC
+                    ORDER BY embedding <=> %s::vector
                     LIMIT %s
                     """
                 ),
-                (emb_literal, emb_literal, similarity_threshold, limit),
+                (emb_literal, embedding_model_name, embedding_model_name, emb_literal, similarity_threshold, emb_literal, limit),
             )
             rows = cur.fetchall()
 
@@ -325,10 +327,10 @@ class PaperRepository:
                 """
                 SELECT *, 1 - (embedding <=> %s)::float AS similarity_score
                 FROM papers
-                WHERE id != %s AND embedding IS NOT NULL AND (1 - (embedding <=> %s)::float) >= %s
-                ORDER BY similarity_score DESC LIMIT %s
+                WHERE id != %s AND embedding_model = %s AND embedding IS NOT NULL AND (1 - (embedding <=> %s)::float) >= %s
+                ORDER BY embedding <=> %s::vector LIMIT %s
                 """,
-                (query_embedding, paper_id, query_embedding, similarity_threshold, limit),
+                (query_embedding, paper_id, ref["embedding_model"], query_embedding, similarity_threshold, query_embedding, limit),
             )
             similars = cur.fetchall()
 
@@ -645,17 +647,22 @@ class PaperRepository:
     # ---------------------------------------------------------------------
 
     @staticmethod
-    def semantic_search(query_text: str, embedding_model, *, limit: int = 10, similarity_threshold: float = 0.7):
+    def semantic_search(query_text: str, embedding_model, *, embedding_model_name: str | None = None, limit: int = 10, similarity_threshold: float = 0.7):
         query_embedding = embedding_model.invoke(query_text)
         if hasattr(query_embedding, "tolist"):
             query_embedding = query_embedding.tolist()
-        return PaperRepository.find_similar(query_embedding, limit=limit, similarity_threshold=similarity_threshold)
+        return PaperRepository.find_similar(query_embedding, embedding_model_name=embedding_model_name, limit=limit, similarity_threshold=similarity_threshold)
 
     @staticmethod
     def hybrid_search(
         query_text: str,
         embedding_model,
         *,
+        embedding_model_name: str | None = None,
+        profile_ids: List[int] | None = None,
+        min_profile_score: float | None = None,
+        max_profile_score: float | None = None,
+        profile_related: bool | None = None,
         page: int = 1,
         page_size: int = 10,
         semantic_weight: float = 0.6,
@@ -666,62 +673,86 @@ class PaperRepository:
         to_date: str | None = None,
         similarity_threshold: float = 0.3,
     ) -> Dict[str, Any]:
-        query_embedding = embedding_model.invoke(query_text)
-        if hasattr(query_embedding, "tolist"):
-            query_embedding = query_embedding.tolist()
-
-        # Use the same pgvector format as the working insert method
+        import os
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ValueError("Invalid search pagination")
+        if min(semantic_weight, keyword_weight) < 0 or abs(semantic_weight + keyword_weight - 1) > .01:
+            raise ValueError("Search weights must be nonnegative and sum to one")
+        # Fixed candidate windows keep page counts stable across pagination.
+        candidate_limit = max(100, min(int(os.getenv("SEARCH_CANDIDATES", "500")), 5000))
+        query_embedding = embedding_model.invoke(query_text) if semantic_weight else None
         emb_literal = to_pgvector(query_embedding)
-        
-        sql_inner = (
-            "SELECT *, (1 - (embedding <=> %s::vector))::float AS semantic_score, "
-            "ts_rank(fts, plainto_tsquery('english', %s)) AS keyword_score "
-            "FROM papers WHERE embedding IS NOT NULL"
-        )
-        params: List[Any] = [emb_literal, query_text]
-        conditions: List[str] = []
-        if min_score is not None:
-            conditions.append("score >= %s")
-            params.append(min_score)
-        if max_score is not None:
-            conditions.append("score <= %s")
-            params.append(max_score)
-        if from_date:
-            conditions.append("date >= %s")
-            params.append(from_date)
-        if to_date:
-            conditions.append("date <= %s")
-            params.append(to_date)
-        if conditions:
-            sql_inner += " AND " + " AND ".join(conditions)
-
-        # Embed scalar weights/threshold directly to avoid placeholder confusion
-        sql_outer = (
-            f"SELECT sub.*, (sub.semantic_score * {semantic_weight} + "
-            f"sub.keyword_score * {keyword_weight}) AS hybrid_score "
-            f"FROM ({sql_inner}) sub WHERE sub.semantic_score >= {similarity_threshold} "
-            "ORDER BY hybrid_score DESC"
-        )
-
-        offset = (page - 1) * page_size
-        sql_paginated = sql_outer + " LIMIT %s OFFSET %s"
-
-        params_inner = list(params)  # copy for count query
-        params_paginated = list(params) + [page_size, offset]
-
+        filters = []
+        params = {"embedding": emb_literal, "query": query_text, "limit": candidate_limit,
+                  "semantic_weight": semantic_weight, "keyword_weight": keyword_weight,
+                  "threshold": similarity_threshold, "offset": (page-1)*page_size, "page_size": page_size}
+        for column, op, value, key in [("score", ">=", min_score, "min_score"),
+                                      ("score", "<=", max_score, "max_score"),
+                                      ("date", ">=", from_date, "from_date"),
+                                      ("date", "<=", to_date, "to_date")]:
+            if value is not None:
+                filters.append(f"{column} {op} %({key})s")
+                params[key] = value
+        profile_projection = "NULL::float AS profile_score"
+        if profile_ids:
+            params['profiles'] = profile_ids
+            profile_conditions = ['pps.paper_id=papers.id', 'pps.profile_id=ANY(%(profiles)s)']
+            for column, op, value, key in [('score', '>=', min_profile_score, 'profile_min'),
+                                          ('score', '<=', max_profile_score, 'profile_max'),
+                                          ('related', '=', profile_related, 'profile_related')]:
+                if value is not None:
+                    profile_conditions.append(f'pps.{column} {op} %({key})s')
+                    params[key] = value
+            filters.append('EXISTS (SELECT 1 FROM paper_profile_scores pps WHERE ' + ' AND '.join(profile_conditions) + ')')
+            profile_projection = '(SELECT AVG(pps.score)::float FROM paper_profile_scores pps WHERE pps.paper_id=p.id AND pps.profile_id=ANY(%(profiles)s)) AS profile_score'
+        where = " AND ".join(filters) or "TRUE"
+        model_filter = ""
+        if embedding_model_name:
+            model_filter = " AND embedding_model = %(model)s"
+            params['model'] = embedding_model_name
+        # Independent lexical retrieval includes exact matches without embeddings.
+        # ORDER BY distance ASC allows the vector index to serve candidates.
+        query = f"""
+            WITH semantic_candidates AS MATERIALIZED (
+                SELECT id, embedding <=> %(embedding)s::vector AS distance
+                FROM papers WHERE {where} AND embedding IS NOT NULL {model_filter}
+                  AND %(semantic_weight)s > 0
+                ORDER BY embedding <=> %(embedding)s::vector LIMIT %(limit)s
+            ), semantic AS (
+                SELECT id, 1-distance AS semantic_score,
+                       row_number() OVER (ORDER BY distance, id) AS rank
+                FROM semantic_candidates WHERE 1-distance >= %(threshold)s
+            ), lexical_candidates AS MATERIALIZED (
+                SELECT id, ts_rank(fts, websearch_to_tsquery('english', %(query)s)) AS keyword_score
+                FROM papers WHERE {where} AND %(keyword_weight)s > 0
+                  AND fts @@ websearch_to_tsquery('english', %(query)s)
+                ORDER BY keyword_score DESC, id LIMIT %(limit)s
+            ), lexical AS (
+                SELECT *, row_number() OVER (ORDER BY keyword_score DESC, id) AS rank
+                FROM lexical_candidates
+            ), fused AS MATERIALIZED (
+                SELECT COALESCE(s.id,l.id) AS id, COALESCE(s.semantic_score,0) AS semantic_score,
+                       COALESCE(l.keyword_score,0) AS keyword_score,
+                       COALESCE(%(semantic_weight)s/(60.0+s.rank),0) +
+                       COALESCE(%(keyword_weight)s/(60.0+l.rank),0) AS hybrid_score
+                FROM semantic s FULL OUTER JOIN lexical l ON s.id=l.id
+            ), page AS (
+                SELECT p.*, f.semantic_score, f.keyword_score, f.hybrid_score, {profile_projection}
+                FROM fused f JOIN papers p ON p.id=f.id
+                ORDER BY f.hybrid_score DESC, p.id LIMIT %(page_size)s OFFSET %(offset)s
+            )
+            SELECT (SELECT count(*) FROM fused) AS total_items,
+                   COALESCE((SELECT jsonb_agg(to_jsonb(page) - 'embedding' - 'fts' - 'text') FROM page), '[]'::jsonb) AS items
+        """
         with get_cursor() as cur:
-            cur.execute("SELECT count(*) FROM (" + sql_outer + ") AS cnt", params_inner)
-            total_items = cur.fetchone()["count"]
-            cur.execute(sql_paginated, params_paginated)
-            items = cur.fetchall()
-
-        total_pages = (total_items + page_size - 1) // page_size if total_items else 0
-        return {
-            "items": items,
-            "total_items": total_items,
-            "total_pages": total_pages,
-            "current_page": page,
-        }
+            cur.execute("SELECT set_config('hnsw.ef_search', %s, true)", (str(min(candidate_limit, 1000)),))
+            cur.execute("SELECT set_config('hnsw.iterative_scan', 'strict_order', true)")
+            cur.execute(query, params)
+            row = cur.fetchone()
+        total = row['total_items']
+        return {"items": row['items'], "total_items": total,
+                "total_pages": (total + page_size - 1)//page_size, "current_page": page,
+                "candidate_limit": candidate_limit, "count_scope": "retrieved_candidates"}
 
     @staticmethod
     def search_seed(query: str, limit: int = 10):

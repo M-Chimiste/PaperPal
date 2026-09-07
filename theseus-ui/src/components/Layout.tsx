@@ -72,8 +72,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     settingsApi
       .getCredentials()
       .then((res) => {
-        const creds = res.data as Record<string, string>;
-        const missing = REQUIRED_KEYS.filter((key) => !creds[key]);
+        const missing = REQUIRED_KEYS.filter((key) => !res.data[key]?.configured);
         setMissingKeys(missing);
       })
       .catch((err) => {
@@ -245,4 +244,4 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 };
 
-export default Layout; 
+export default Layout;

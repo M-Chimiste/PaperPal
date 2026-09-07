@@ -4,7 +4,7 @@
 def test_fresh_db_migrations_apply_cleanly(migrated_db, db):
     rows = db.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall()
     versions = [r["version"] for r in rows]
-    assert versions == list(range(17)), f"Expected migrations 0-16 applied, got {versions}"
+    assert versions == list(range(18)), f"Expected migrations 0-17 applied, got {versions}"
 
     from theseus_insight.db.migrations import MigrationRunner
 
@@ -17,7 +17,7 @@ def test_migrations_idempotent(migrated_db):
 
     applied, skipped, issues = MigrationRunner().run_migrations()
     assert applied == 0
-    assert skipped == 17
+    assert skipped == 18
     assert issues == []
 
 

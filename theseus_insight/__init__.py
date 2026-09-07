@@ -13,22 +13,13 @@
 # limitations under the License.
 
 __version__ = "1.0.1"
-from .theseus_insight import *
-from .prompt import *
-from .inference import *
-from .utils import *
-from .communication import *
-from .data_processing import *
-from .pdf import *
-from .data_model import *
-from .constants import *
-
-
 def __getattr__(name):
-    """Lazily expose podcast symbols without importing pygame on package import."""
+    """Keep package imports free of model loading, media setup and DB work."""
+    from importlib import import_module
+    if name == "TheseusInsight":
+        return import_module(".theseus_insight", __name__).TheseusInsight
     if name in {"PodcastGenerator", "generate_visualizer_video"}:
-        from . import podcast as podcast_module
-        return getattr(podcast_module, name)
+        return getattr(import_module(".podcast", __name__), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # -----------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import inspect
 
 
 EXPECTED = {
-    "newsletter", "podcast", "visualizer", "database_export", "database_import",
+    "research", "custom_newsletter", "profile_newsletter", "star-map", "profile_interest", "newsletter", "podcast", "visualizer", "database_export", "database_import",
     "mindmap_expand", "mindmap_pdf_parse", "profile_aware_ingest", "bulk_embed",
 }
 

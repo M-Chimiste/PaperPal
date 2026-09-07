@@ -24,7 +24,7 @@ async def run(task_manager: "TaskManager", task_id: str):
         task = TaskRepository.get_task(task_id)
         if not task:
             raise ValueError(f"Task {task_id} not found")
-        config = task["config"]
+        config = task["config_json"]
         audio_file_path = config.get("audio_file_path")
         visualizer_params_dict = config.get("visualizer_params")
         output_dir_base = config.get("output_dir_base", "data/visualizations")

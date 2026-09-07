@@ -16,13 +16,14 @@ def progress_callback(task_manager: "TaskManager", task_id: str):
     """Create a progress callback function for TheseusInsight."""
     loop = asyncio.get_event_loop()
 
-    def callback(stage: str, progress: float, message: str = ""):
+    def callback(stage: str, progress: float, message: str = "", metadata=None):
         coro = task_manager.update_task_status(
             task_id=task_id,
             status=TaskStatus.PROCESSING,
             message=f"{stage}: {message}",
             progress=progress,
-            current_step=stage
+            current_step=stage,
+            metadata=metadata,
         )
         if loop.is_running():
             asyncio.run_coroutine_threadsafe(coro, loop)

@@ -10,7 +10,14 @@ from . import (
     profile_ingest, visualizer,
 )
 
+from . import recoverable
+
 HANDLERS = {
+    "research": recoverable.research,
+    "custom_newsletter": recoverable.custom_newsletter,
+    "profile_newsletter": recoverable.profile_newsletter,
+    "star-map": recoverable.star_map,
+    "profile_interest": recoverable.profile_interest,
     "newsletter": newsletter.run,
     "podcast": podcast.run,
     "visualizer": visualizer.run,

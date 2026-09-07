@@ -11,7 +11,7 @@
     "gpu_offload": null
   },
   "judge_model": {
-    "model_name": "lfm2.5-8b-a1b",
+    "model_name": "lfm2.5-1.2b-instruct-mlx-8bit",
     "model_type": "lmstudio",
     "max_new_tokens": 4096,
     "temperature": 0.1,
@@ -22,7 +22,7 @@
     "gpu_offload": null
   },
   "content_extraction_model": {
-    "model_name": "qwen3.6-35b-a3b-mtp",
+    "model_name": "gemma-4-26b-a4b-it-qat-mlx-4bit",
     "model_type": "lmstudio",
     "max_new_tokens": 16000,
     "temperature": 1.0,
@@ -33,7 +33,7 @@
     "gpu_offload": null
   },
   "newsletter_sections_model": {
-    "model_name": "qwen3.6-35b-a3b-mtp",
+    "model_name": "gemma-4-26b-a4b-it-qat-mlx-4bit",
     "model_type": "lmstudio",
     "max_new_tokens": 16000,
     "temperature": 1.0,
@@ -44,7 +44,7 @@
     "gpu_offload": null
   },
   "newsletter_intro_model": {
-    "model_name": "qwen3.6-35b-a3b-mtp",
+    "model_name": "gemma-4-26b-a4b-it-qat-mlx-4bit",
     "model_type": "lmstudio",
     "max_new_tokens": 16000,
     "temperature": 1.0,

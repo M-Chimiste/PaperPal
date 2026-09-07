@@ -1,3 +1,4 @@
+from ...services.search_service import bounded_search, embedding_model as get_search_model
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from typing import Optional, List
 import json
@@ -525,7 +526,8 @@ async def update_paper(paper_id: int, request: PaperUpdateRequest):
         raise HTTPException(status_code=500, detail=f"Update failed: {type(e).__name__}: {str(e)}")
 
 @router.post("/similarity-search", response_model=SimilaritySearchResponse)
-async def semantic_similarity_search(request: SimilaritySearchRequest):
+@bounded_search
+def semantic_similarity_search(request: SimilaritySearchRequest):
     """
     This endpoint initiates a new task for semantic similarity search.
     It retrieves the orchestration config, initializes the embedding model,
@@ -556,15 +558,13 @@ async def semantic_similarity_search(request: SimilaritySearchRequest):
         
         # Initialize the embedding model
         from ...inference import SentenceTransformerInference
-        embedding_model = SentenceTransformerInference(
-            embedding_model_config['model_name'], 
-            remote_code=embedding_model_config.get('trust_remote_code', False)
-        )
+        embedding_model = get_search_model(embedding_model_config)
         
         # Perform similarity search
         similar_papers = PaperRepository.semantic_search(
             query_text=request.query_text,
             embedding_model=embedding_model,
+            embedding_model_name=embedding_model_config["model_name"],
             limit=request.limit,
             similarity_threshold=request.similarity_threshold,
         )
@@ -596,7 +596,8 @@ async def semantic_similarity_search(request: SimilaritySearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/hybrid-search", response_model=HybridSearchResponse)
-async def hybrid_search_papers(request: HybridSearchRequest):
+@bounded_search
+def hybrid_search_papers(request: HybridSearchRequest):
     """
     Initiates a hybrid search for papers based on semantic and keyword weights.
 
@@ -638,15 +639,17 @@ async def hybrid_search_papers(request: HybridSearchRequest):
         
         # Initialize the embedding model
         from ...inference import SentenceTransformerInference
-        embedding_model = SentenceTransformerInference(
-            embedding_model_config['model_name'], 
-            remote_code=embedding_model_config.get('trust_remote_code', False)
-        )
+        embedding_model = get_search_model(embedding_model_config) if request.semantic_weight else None
         
         # Perform hybrid search
         search_results = PaperRepository.hybrid_search(
             query_text=request.query_text,
             embedding_model=embedding_model,
+            embedding_model_name=embedding_model_config["model_name"],
+            profile_ids=request.profile_ids,
+            min_profile_score=request.min_profile_score,
+            max_profile_score=request.max_profile_score,
+            profile_related=request.profile_related,
             page=request.page,
             page_size=request.page_size,
             semantic_weight=request.semantic_weight,
@@ -667,7 +670,8 @@ async def hybrid_search_papers(request: HybridSearchRequest):
                 score=converted_p['score'], date=converted_p['date'], url=converted_p['url'],
                 date_run=converted_p['date_run'], rationale=converted_p['rationale'],
                 related=converted_p['related'], cosine_similarity=converted_p['cosine_similarity'],
-                embedding_model=converted_p['embedding_model'],
+                embedding_model=converted_p.get('embedding_model') or 'pending',
+                profile_score=converted_p.get('profile_score'),
                 semantic_score=converted_p.get('semantic_score'),
                 keyword_score=converted_p.get('keyword_score'),
                 hybrid_score=converted_p.get('hybrid_score'),
@@ -679,6 +683,7 @@ async def hybrid_search_papers(request: HybridSearchRequest):
             query_text=request.query_text,
             results=results,
             total_results=search_results['total_items'],
+            candidate_limit=search_results['candidate_limit'],
             total_pages=search_results['total_pages'],
             current_page=search_results['current_page'],
             semantic_weight=request.semantic_weight,
@@ -769,10 +774,7 @@ async def update_paper_embedding(paper_id: int):
         
         # Initialize the embedding model
         from ...inference import SentenceTransformerInference
-        embedding_model = SentenceTransformerInference(
-            embedding_model_config['model_name'], 
-            remote_code=embedding_model_config.get('trust_remote_code', False)
-        )
+        embedding_model = get_search_model(embedding_model_config)
         
         # Generate embedding for the paper's abstract
         embedding = embedding_model.invoke(paper['abstract'])
@@ -790,7 +792,8 @@ async def update_paper_embedding(paper_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{paper_id}/similar", response_model=SimilarPapersResponse)
-async def find_similar_papers_to_existing(
+@bounded_search
+def find_similar_papers_to_existing(
     paper_id: int,
     limit: int = Query(10, gt=0, le=200, description="Maximum number of similar papers to return"),
     similarity_threshold: float = Query(0.7, ge=0.0, le=1.0, description="Minimum similarity score (0-1)")
@@ -1140,4 +1143,4 @@ async def check_existing_bulk_data(start_date: str, end_date: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to check existing data: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to check existing data: {str(e)}")

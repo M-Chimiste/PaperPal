@@ -148,7 +148,7 @@ async def handle_websocket_connection(websocket: WebSocket, task_id: str, endpoi
             from datetime import datetime
             from ..models import RunStatus, NodeStatus  # Local import to avoid circular issues
 
-            current_task = task_manager.get_task_status(task_id)
+            current_task = await asyncio.to_thread(task_manager.get_task_status, task_id)
             if current_task:
                 snapshot_status = RunStatus(
                     taskId=task_id,
@@ -165,7 +165,7 @@ async def handle_websocket_connection(websocket: WebSocket, task_id: str, endpoi
                     currentStep=current_task.get("current_step"),
                     progress=current_task.get("progress", 0),
                     message=current_task.get("message", ""),
-                    result=current_task.get("result"),
+                    result=current_task.get("result_json"),
                     error=current_task.get("error"),
                     metadata=current_task.get("metadata"),  # Include metadata in snapshot
                 )
@@ -177,7 +177,21 @@ async def handle_websocket_connection(websocket: WebSocket, task_id: str, endpoi
 
         # Main loop: forward subsequent updates
         while True:
-            status = await status_queue.get()
+            try:
+                status = await asyncio.wait_for(status_queue.get(), timeout=2)
+            except asyncio.TimeoutError:
+                # Another API instance may own this task. Persisted state is
+                # authoritative; reconnecting clients must continue progressing.
+                current_task = await asyncio.to_thread(task_manager.get_task_status, task_id)
+                if not current_task:
+                    break
+                state = current_task['status']
+                if state in {'cancelled', 'canceled'}:
+                    state = 'failed'
+                status = RunStatus(taskId=task_id, nodes=[], overallStatus=state,
+                    currentStep=current_task.get('current_step'), progress=current_task.get('progress') or 0,
+                    message=current_task.get('message') or '', result=current_task.get('result_json'),
+                    error=current_task.get('error'), metadata=current_task.get('metadata'))
             # Sentinel for shutdown
             if status is None:
                 break
@@ -509,4 +523,4 @@ async def star_map_status(websocket: WebSocket, task_id: str):
 @router.websocket("/ws/bulk-judge/{job_id}")
 async def bulk_judge_status(websocket: WebSocket, job_id: str):
     """WebSocket endpoint for bulk judge job status updates."""
-    await handle_bulk_judge_connection(websocket, job_id) 
+    await handle_bulk_judge_connection(websocket, job_id)

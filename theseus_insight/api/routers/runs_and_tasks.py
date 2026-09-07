@@ -426,4 +426,53 @@ async def download_task_artifact(task_id: str, file_type: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/api/tasks/{task_id}/diagnostics")
+def task_diagnostics(task_id: str):
+    from ...db import get_cursor
+    with get_cursor() as cur:
+        cur.execute("SELECT stage,status,duration_ms,error_type,details,created_at FROM task_stage_events WHERE task_id=%s ORDER BY id DESC LIMIT 200", (task_id,))
+        events = cur.fetchall()
+        cur.execute("SELECT status,updated_at FROM delivery_receipts WHERE task_id=%s", (task_id,))
+        deliveries = cur.fetchall()
+        cur.execute("SELECT status,current_step,message,error FROM tasks WHERE task_id=%s", (task_id,))
+        task = cur.fetchone()
+    return {"events": events, "deliveries": deliveries, "task": task}
+
+
+@router.post("/api/tasks/{task_id}/retry")
+async def retry_task(task_id: str):
+    import asyncio
+    from ...data_access.runtime import DispatchRepository
+    task = await asyncio.to_thread(TaskRepository.get_task, task_id)
+    if not task or task['status'] != 'failed':
+        raise HTTPException(409, 'Only failed tasks can be retried')
+    try:
+        await asyncio.to_thread(DispatchRepository.retry, task_id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    await task_manager.start_worker()
+    return {"task_id": task_id, "status": "pending"}
+
+
+@router.post("/api/tasks/{task_id}/delivery-resolution")
+def resolve_delivery(task_id: str, resolution: str = Query(..., pattern="^(sent|retry)$")):
+    from ...db import get_cursor
+    with get_cursor() as cur:
+        cur.execute("SELECT status FROM tasks WHERE task_id=%s", (task_id,))
+        task = cur.fetchone()
+        if not task or task['status'] != 'failed':
+            raise HTTPException(409, 'Resolve delivery only after the task has failed')
+        cur.execute("UPDATE delivery_receipts SET status=%s,updated_at=now() WHERE task_id=%s AND status IN ('sending','uncertain') RETURNING delivery_key", (resolution, task_id))
+        if not cur.fetchone():
+            raise HTTPException(409, 'No uncertain delivery to resolve')
+    return {"status": resolution}
+
+
+@router.get("/api/runtime/provenance")
+def runtime_provenance():
+    from ...observability import provenance
+    from ...data_access import SettingsRepository
+    config = SettingsRepository.get_orchestration_config()
+    return {**provenance(config), "model": config.get("embedding_model", {}).get("model_name", "unknown")}

@@ -146,7 +146,7 @@
           "intro_music_file": {
             "anyOf": [
               {
-                "format": "binary",
+                "contentMediaType": "application/octet-stream",
                 "type": "string"
               },
               {
@@ -164,7 +164,7 @@
             "anyOf": [
               {
                 "items": {
-                  "format": "binary",
+                  "contentMediaType": "application/octet-stream",
                   "type": "string"
                 },
                 "type": "array"
@@ -186,7 +186,7 @@
       "Body_import_database_api_settings_database_import_post": {
         "properties": {
           "backup_file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Backup File",
             "type": "string"
           },
@@ -225,7 +225,7 @@
           "intro_music_file": {
             "anyOf": [
               {
-                "format": "binary",
+                "contentMediaType": "application/octet-stream",
                 "type": "string"
               },
               {
@@ -241,8 +241,8 @@
       "Body_run_visualizer_pipeline_endpoint_api_actions_run_visualizer_pipeline_post": {
         "properties": {
           "audio_file": {
+            "contentMediaType": "application/octet-stream",
             "description": "Audio file to visualize",
-            "format": "binary",
             "title": "Audio File",
             "type": "string"
           },
@@ -841,6 +841,19 @@
             "title": "Keyword Weight",
             "type": "number"
           },
+          "max_profile_score": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Profile Score"
+          },
           "max_score": {
             "anyOf": [
               {
@@ -852,6 +865,19 @@
             ],
             "description": "Maximum paper score filter",
             "title": "Max Score"
+          },
+          "min_profile_score": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Profile Score"
           },
           "min_score": {
             "anyOf": [
@@ -879,6 +905,31 @@
             "maximum": 100.0,
             "title": "Page Size",
             "type": "integer"
+          },
+          "profile_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Ids"
+          },
+          "profile_related": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Related"
           },
           "query_text": {
             "description": "Search query text",
@@ -922,6 +973,16 @@
       },
       "HybridSearchResponse": {
         "properties": {
+          "candidate_limit": {
+            "default": 500,
+            "title": "Candidate Limit",
+            "type": "integer"
+          },
+          "count_scope": {
+            "default": "retrieved_candidates",
+            "title": "Count Scope",
+            "type": "string"
+          },
           "current_page": {
             "title": "Current Page",
             "type": "integer"
@@ -2690,7 +2751,7 @@
             "type": "array"
           },
           "end_date": {
-            "example": "2026-06-04",
+            "example": "2026-09-01",
             "title": "End Date",
             "type": "string"
           },
@@ -2814,7 +2875,7 @@
             "type": "string"
           },
           "start_date": {
-            "example": "2026-06-10",
+            "example": "2026-09-07",
             "title": "Start Date",
             "type": "string"
           },
@@ -2851,125 +2912,7 @@
         "title": "NewsletterRunParams",
         "type": "object"
       },
-      "OrchestrationConfig-Input": {
-        "properties": {
-          "content_extraction_model": {
-            "$ref": "#/components/schemas/ModelConfig",
-            "example": {
-              "max_new_tokens": 4096,
-              "model_name": "gemma3:27b-it-qat",
-              "model_type": "ollama",
-              "num_ctx": 131072,
-              "temperature": 0.1
-            }
-          },
-          "embedding_model": {
-            "$ref": "#/components/schemas/ModelConfig",
-            "example": {
-              "model_name": "Alibaba-NLP/gte-modernbert-base",
-              "model_type": "sentence-transformers",
-              "trust_remote_code": true
-            }
-          },
-          "judge_model": {
-            "$ref": "#/components/schemas/ModelConfig",
-            "example": {
-              "max_new_tokens": 512,
-              "model_name": "phi4-mini:3.8b-q8_0",
-              "model_type": "ollama",
-              "num_ctx": 4096,
-              "temperature": 0.1
-            }
-          },
-          "mind_map_config": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MindMapConfig"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Mind-Map Explorer configuration"
-          },
-          "newsletter_intro_model": {
-            "$ref": "#/components/schemas/ModelConfig",
-            "example": {
-              "max_new_tokens": 4096,
-              "model_name": "gemini-2.0-flash",
-              "model_type": "gemini",
-              "num_ctx": 131072,
-              "temperature": 0.1
-            }
-          },
-          "newsletter_sections_model": {
-            "$ref": "#/components/schemas/ModelConfig",
-            "example": {
-              "max_new_tokens": 4096,
-              "model_name": "gemma3:27b-it-qat",
-              "model_type": "ollama",
-              "num_ctx": 131072,
-              "temperature": 0.1
-            }
-          },
-          "podcast_model": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ModelConfig"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "example": {
-              "max_new_tokens": 8192,
-              "model_name": "gemini-2.0-flash",
-              "model_type": "gemini",
-              "num_ctx": 131072,
-              "temperature": 0.1
-            }
-          },
-          "research_agent_model_config": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ResearchAgentModelConfigApi"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Research Agent model configuration for automated literature review"
-          },
-          "tts_model": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TTSModelConfig"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "example": {
-              "speaker_1_speed": 1.0,
-              "speaker_1_voice": "sage",
-              "speaker_2_speed": 1.0,
-              "speaker_2_voice": "ash",
-              "tts_model_name": "tts-1",
-              "tts_provider": "openai"
-            }
-          }
-        },
-        "required": [
-          "embedding_model",
-          "judge_model",
-          "content_extraction_model",
-          "newsletter_sections_model",
-          "newsletter_intro_model"
-        ],
-        "title": "OrchestrationConfig",
-        "type": "object"
-      },
-      "OrchestrationConfig-Output": {
+      "OrchestrationConfig": {
         "properties": {
           "content_extraction_model": {
             "$ref": "#/components/schemas/ModelConfig",
@@ -4001,7 +3944,7 @@
             "title": "Email Recipients"
           },
           "end_date": {
-            "example": "2026-06-04",
+            "example": "2026-09-01",
             "title": "End Date",
             "type": "string"
           },
@@ -4025,7 +3968,7 @@
             "title": "Research Interests"
           },
           "start_date": {
-            "example": "2026-06-10",
+            "example": "2026-09-07",
             "title": "Start Date",
             "type": "string"
           },
@@ -6833,6 +6776,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -12853,6 +12803,25 @@
         ]
       }
     },
+    "/api/runtime/provenance": {
+      "get": {
+        "operationId": "runtime_provenance_api_runtime_provenance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Runtime Provenance",
+        "tags": [
+          "runs-and-tasks"
+        ]
+      }
+    },
     "/api/scheduled-tasks": {
       "get": {
         "description": "Get all scheduled tasks with optional filtering.",
@@ -13370,7 +13339,6 @@
     },
     "/api/settings/credentials": {
       "get": {
-        "description": "Retrieves the API credentials from the database or environment.\n\nThis endpoint fetches the API credentials from the database or environment.\nIt returns the credentials as a dictionary.\n\nReturns:\n    dict: A dictionary containing the API credentials.\n\nRaises:\n    HTTPException: If an error occurs while fetching the API credentials.",
         "operationId": "get_credentials_api_settings_credentials_get",
         "responses": {
           "200": {
@@ -13378,7 +13346,8 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": {
-                    "type": "string"
+                    "additionalProperties": true,
+                    "type": "object"
                   },
                   "title": "Response Get Credentials Api Settings Credentials Get",
                   "type": "object"
@@ -13394,7 +13363,6 @@
         ]
       },
       "put": {
-        "description": "Updates the API credentials in the database and environment.\n\nThis endpoint updates the API credentials in the database and environment.\nIt returns a success message if the credentials are updated successfully.\n\nArgs:\n    data (Dict[str, str]): A dictionary containing the API credentials to update.\n\nReturns:\n    dict: A dictionary containing the status and message of the update operation.\n\nRaises:\n    HTTPException: If an error occurs while updating the API credentials.",
         "operationId": "update_credentials_api_settings_credentials_put",
         "requestBody": {
           "content": {
@@ -13433,6 +13401,48 @@
           }
         },
         "summary": "Update Credentials",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/credentials/{key}": {
+      "delete": {
+        "operationId": "delete_credential_api_settings_credentials__key__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusMessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Credential",
         "tags": [
           "settings"
         ]
@@ -14238,7 +14248,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrchestrationConfig-Output"
+                  "$ref": "#/components/schemas/OrchestrationConfig"
                 }
               }
             },
@@ -14257,7 +14267,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OrchestrationConfig-Input"
+                "$ref": "#/components/schemas/OrchestrationConfig"
               }
             }
           },
@@ -14622,6 +14632,96 @@
         ]
       }
     },
+    "/api/tasks/{task_id}/delivery-resolution": {
+      "post": {
+        "operationId": "resolve_delivery_api_tasks__task_id__delivery_resolution_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resolution",
+            "required": true,
+            "schema": {
+              "pattern": "^(sent|retry)$",
+              "title": "Resolution",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Delivery",
+        "tags": [
+          "runs-and-tasks"
+        ]
+      }
+    },
+    "/api/tasks/{task_id}/diagnostics": {
+      "get": {
+        "operationId": "task_diagnostics_api_tasks__task_id__diagnostics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Task Diagnostics",
+        "tags": [
+          "runs-and-tasks"
+        ]
+      }
+    },
     "/api/tasks/{task_id}/download/{file_type}": {
       "get": {
         "description": "Downloads a task artifact (newsletter or podcast).\n\nThis endpoint downloads a task artifact by its ID and file type.\nIt returns the artifact if found, otherwise raises an HTTP exception.\n\nArgs:\n    task_id (str): The ID of the task to download the artifact for.\n    file_type (str): The type of file to download.\n\nReturns:\n    FileResponse: A file response containing the artifact.\n\nRaises:\n    HTTPException: If the task is not found, not completed, or the artifact is not found.",
@@ -14708,6 +14808,46 @@
           }
         },
         "summary": "Get Task Result",
+        "tags": [
+          "runs-and-tasks"
+        ]
+      }
+    },
+    "/api/tasks/{task_id}/retry": {
+      "post": {
+        "operationId": "retry_task_api_tasks__task_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry Task",
         "tags": [
           "runs-and-tasks"
         ]

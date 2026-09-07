@@ -1,3 +1,4 @@
+from ..workers.ownership import worker_environment
 """
 Newsletter Scorer - Multi-server orchestration for newsletter LLM judge scoring.
 
@@ -221,7 +222,7 @@ class NewsletterScorer:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     cwd=os.getcwd(),
-                    env=os.environ.copy()
+                    env=worker_environment()
                 )
 
                 logger.info(f"Launched worker process PID {process.pid} for {server.name}")

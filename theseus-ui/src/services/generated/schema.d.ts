@@ -2512,6 +2512,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runtime/provenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runtime Provenance */
+        get: operations["runtime_provenance_api_runtime_provenance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/scheduled-tasks": {
         parameters: {
             query?: never;
@@ -2756,39 +2773,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Credentials
-         * @description Retrieves the API credentials from the database or environment.
-         *
-         *     This endpoint fetches the API credentials from the database or environment.
-         *     It returns the credentials as a dictionary.
-         *
-         *     Returns:
-         *         dict: A dictionary containing the API credentials.
-         *
-         *     Raises:
-         *         HTTPException: If an error occurs while fetching the API credentials.
-         */
+        /** Get Credentials */
         get: operations["get_credentials_api_settings_credentials_get"];
-        /**
-         * Update Credentials
-         * @description Updates the API credentials in the database and environment.
-         *
-         *     This endpoint updates the API credentials in the database and environment.
-         *     It returns a success message if the credentials are updated successfully.
-         *
-         *     Args:
-         *         data (Dict[str, str]): A dictionary containing the API credentials to update.
-         *
-         *     Returns:
-         *         dict: A dictionary containing the status and message of the update operation.
-         *
-         *     Raises:
-         *         HTTPException: If an error occurs while updating the API credentials.
-         */
+        /** Update Credentials */
         put: operations["update_credentials_api_settings_credentials_put"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/credentials/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Credential */
+        delete: operations["delete_credential_api_settings_credentials__key__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3443,6 +3450,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{task_id}/delivery-resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve Delivery */
+        post: operations["resolve_delivery_api_tasks__task_id__delivery_resolution_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{task_id}/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Task Diagnostics */
+        get: operations["task_diagnostics_api_tasks__task_id__diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{task_id}/download/{file_type}": {
         parameters: {
             query?: never;
@@ -3502,6 +3543,23 @@ export interface paths {
         get: operations["get_task_result_api_tasks__task_id__result_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{task_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Task */
+        post: operations["retry_task_api_tasks__task_id__retry_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4045,10 +4103,7 @@ export interface components {
         };
         /** Body_import_database_api_settings_database_import_post */
         Body_import_database_api_settings_database_import_post: {
-            /**
-             * Backup File
-             * Format: binary
-             */
+            /** Backup File */
             backup_file: string;
             /**
              * Import Mode
@@ -4074,7 +4129,6 @@ export interface components {
         Body_run_visualizer_pipeline_endpoint_api_actions_run_visualizer_pipeline_post: {
             /**
              * Audio File
-             * Format: binary
              * @description Audio file to visualize
              */
             audio_file: string;
@@ -4416,11 +4470,15 @@ export interface components {
              * @default 0.4
              */
             keyword_weight: number;
+            /** Max Profile Score */
+            max_profile_score?: number | null;
             /**
              * Max Score
              * @description Maximum paper score filter
              */
             max_score?: number | null;
+            /** Min Profile Score */
+            min_profile_score?: number | null;
             /**
              * Min Score
              * @description Minimum paper score filter
@@ -4438,6 +4496,10 @@ export interface components {
              * @default 10
              */
             page_size: number;
+            /** Profile Ids */
+            profile_ids?: number[] | null;
+            /** Profile Related */
+            profile_related?: boolean | null;
             /**
              * Query Text
              * @description Search query text
@@ -4463,6 +4525,16 @@ export interface components {
         };
         /** HybridSearchResponse */
         HybridSearchResponse: {
+            /**
+             * Candidate Limit
+             * @default 500
+             */
+            candidate_limit: number;
+            /**
+             * Count Scope
+             * @default retrieved_candidates
+             */
+            count_scope: string;
             /** Current Page */
             current_page: number;
             /** Keyword Weight */
@@ -5411,7 +5483,7 @@ export interface components {
             email_recipients?: string[];
             /**
              * End Date
-             * @example 2026-06-04
+             * @example 2026-09-01
              */
             end_date: string;
             /**
@@ -5468,7 +5540,7 @@ export interface components {
             research_interests: string;
             /**
              * Start Date
-             * @example 2026-06-10
+             * @example 2026-09-07
              */
             start_date: string;
             /**
@@ -5490,83 +5562,7 @@ export interface components {
             use_profile_recipients: boolean;
         };
         /** OrchestrationConfig */
-        "OrchestrationConfig-Input": {
-            /**
-             * @example {
-             *       "max_new_tokens": 4096,
-             *       "model_name": "gemma3:27b-it-qat",
-             *       "model_type": "ollama",
-             *       "num_ctx": 131072,
-             *       "temperature": 0.1
-             *     }
-             */
-            content_extraction_model: components["schemas"]["ModelConfig"];
-            /**
-             * @example {
-             *       "model_name": "Alibaba-NLP/gte-modernbert-base",
-             *       "model_type": "sentence-transformers",
-             *       "trust_remote_code": true
-             *     }
-             */
-            embedding_model: components["schemas"]["ModelConfig"];
-            /**
-             * @example {
-             *       "max_new_tokens": 512,
-             *       "model_name": "phi4-mini:3.8b-q8_0",
-             *       "model_type": "ollama",
-             *       "num_ctx": 4096,
-             *       "temperature": 0.1
-             *     }
-             */
-            judge_model: components["schemas"]["ModelConfig"];
-            /** @description Mind-Map Explorer configuration */
-            mind_map_config?: components["schemas"]["MindMapConfig"] | null;
-            /**
-             * @example {
-             *       "max_new_tokens": 4096,
-             *       "model_name": "gemini-2.0-flash",
-             *       "model_type": "gemini",
-             *       "num_ctx": 131072,
-             *       "temperature": 0.1
-             *     }
-             */
-            newsletter_intro_model: components["schemas"]["ModelConfig"];
-            /**
-             * @example {
-             *       "max_new_tokens": 4096,
-             *       "model_name": "gemma3:27b-it-qat",
-             *       "model_type": "ollama",
-             *       "num_ctx": 131072,
-             *       "temperature": 0.1
-             *     }
-             */
-            newsletter_sections_model: components["schemas"]["ModelConfig"];
-            /**
-             * @example {
-             *       "max_new_tokens": 8192,
-             *       "model_name": "gemini-2.0-flash",
-             *       "model_type": "gemini",
-             *       "num_ctx": 131072,
-             *       "temperature": 0.1
-             *     }
-             */
-            podcast_model?: components["schemas"]["ModelConfig"] | null;
-            /** @description Research Agent model configuration for automated literature review */
-            research_agent_model_config?: components["schemas"]["ResearchAgentModelConfigApi"] | null;
-            /**
-             * @example {
-             *       "speaker_1_speed": 1,
-             *       "speaker_1_voice": "sage",
-             *       "speaker_2_speed": 1,
-             *       "speaker_2_voice": "ash",
-             *       "tts_model_name": "tts-1",
-             *       "tts_provider": "openai"
-             *     }
-             */
-            tts_model?: components["schemas"]["TTSModelConfig"] | null;
-        };
-        /** OrchestrationConfig */
-        "OrchestrationConfig-Output": {
+        OrchestrationConfig: {
             /**
              * @example {
              *       "max_new_tokens": 4096,
@@ -6088,7 +6084,7 @@ export interface components {
             email_recipients?: string[] | null;
             /**
              * End Date
-             * @example 2026-06-04
+             * @example 2026-09-01
              */
             end_date: string;
             /**
@@ -6105,7 +6101,7 @@ export interface components {
             research_interests?: string | null;
             /**
              * Start Date
-             * @example 2026-06-10
+             * @example 2026-09-07
              */
             start_date: string;
             /**
@@ -7504,6 +7500,10 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -11249,6 +11249,26 @@ export interface operations {
             };
         };
     };
+    runtime_provenance_api_runtime_provenance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     get_scheduled_tasks_api_scheduled_tasks_get: {
         parameters: {
             query?: {
@@ -11646,7 +11666,9 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        [key: string]: string;
+                        [key: string]: {
+                            [key: string]: unknown;
+                        };
                     };
                 };
             };
@@ -11666,6 +11688,37 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusMessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_credential_api_settings_credentials__key__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -12277,7 +12330,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrchestrationConfig-Output"];
+                    "application/json": components["schemas"]["OrchestrationConfig"];
                 };
             };
         };
@@ -12291,7 +12344,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["OrchestrationConfig-Input"];
+                "application/json": components["schemas"]["OrchestrationConfig"];
             };
         };
         responses: {
@@ -12534,6 +12587,70 @@ export interface operations {
             };
         };
     };
+    resolve_delivery_api_tasks__task_id__delivery_resolution_post: {
+        parameters: {
+            query: {
+                resolution: string;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    task_diagnostics_api_tasks__task_id__diagnostics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     download_task_artifact_api_tasks__task_id__download__file_type__get: {
         parameters: {
             query?: never;
@@ -12567,6 +12684,37 @@ export interface operations {
         };
     };
     get_task_result_api_tasks__task_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_task_api_tasks__task_id__retry_post: {
         parameters: {
             query?: never;
             header?: never;

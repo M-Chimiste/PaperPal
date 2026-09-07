@@ -78,7 +78,11 @@ async function fetchPapersPage(params: PapersQueryParams, page: number): Promise
       appliedFilters.minScore > 0 ? appliedFilters.minScore : undefined,
       appliedFilters.maxScore < 10 ? appliedFilters.maxScore : undefined,
       appliedFilters.fromDate ? appliedFilters.fromDate.toISOString().split('T')[0] : undefined,
-      appliedFilters.toDate ? appliedFilters.toDate.toISOString().split('T')[0] : undefined
+      appliedFilters.toDate ? appliedFilters.toDate.toISOString().split('T')[0] : undefined,
+      selectedProfileIds.length ? selectedProfileIds : undefined,
+      appliedFilters.minProfileScore,
+      appliedFilters.maxProfileScore,
+      appliedFilters.relevanceFilter === 'all' ? undefined : appliedFilters.relevanceFilter === 'relevant'
     );
     return {
       items: hybridData.results,

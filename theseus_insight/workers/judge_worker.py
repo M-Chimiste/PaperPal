@@ -256,6 +256,8 @@ class JudgeWorker:
         # Set up signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
+        from .ownership import watch_parent
+        watch_parent(self)
         
         last_heartbeat = time.time()
         last_lease_cleanup = time.time()

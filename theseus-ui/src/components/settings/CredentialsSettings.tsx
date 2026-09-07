@@ -43,13 +43,14 @@ export const CredentialsSettings: React.FC = () => {
 
   useEffect(() => {
     if (credentials) {
-      setCredValues(credentials);
+      setCredValues(Object.fromEntries(Object.entries(credentials).map(([key, status]) => [key, status.value])));
     }
   }, [credentials]);
 
   const updateCredentialsMutation = useMutation({
     mutationFn: (data: Record<string, string>) => settingsApi.updateCredentials(data),
     onSuccess: () => {
+      setCredValues({});
       queryClient.invalidateQueries({ queryKey: ['credentials'] });
       showSuccess('Credentials updated');
     },
@@ -71,6 +72,8 @@ export const CredentialsSettings: React.FC = () => {
               label={key}
               type={PLAIN_KEYS.has(key) ? 'text' : (showCreds[key] ? 'text' : 'password')}
               value={credValues[key] || ''}
+              placeholder={credentials?.[key]?.configured ? 'Configured — enter a replacement' : 'Not configured'}
+              helperText="Leave blank to keep the existing value"
               onChange={e => setCredValues({ ...credValues, [key]: e.target.value })}
               InputProps={{
                 endAdornment:

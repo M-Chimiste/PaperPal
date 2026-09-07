@@ -400,62 +400,38 @@ async def send_test_email():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/credentials", response_model=Dict[str, str])
+@router.get("/credentials", response_model=Dict[str, dict])
 async def get_credentials():
-    """
-    Retrieves the API credentials from the database or environment.
+    from ...db.async_bridge import run_repo
+    def read_status():
+        return {key: {"configured": bool(SettingsRepository.get(key) or os.getenv(key)),
+                      "value": (SettingsRepository.get(key) or os.getenv(key, "")) if key == "OLLAMA_URL" else ""}
+                for key in CREDENTIAL_KEYS}
+    return await run_repo(read_status)
 
-    This endpoint fetches the API credentials from the database or environment.
-    It returns the credentials as a dictionary.
-
-    Returns:
-        dict: A dictionary containing the API credentials.
-
-    Raises:
-        HTTPException: If an error occurs while fetching the API credentials.
-    """
-    try:
-        creds = {}
-        for key in CREDENTIAL_KEYS:
-            if key == "OLLAMA_URL":
-                val = SettingsRepository.get(key) or os.getenv(key, "")
-            else:
-                # Secret helpers not implemented yet; keep env fallback
-                val = SettingsRepository.get(key) or os.getenv(key, "")
-            creds[key] = val
-        return creds
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/credentials", response_model=StatusMessageResponse)
 async def update_credentials(data: Dict[str, str]):
-    """
-    Updates the API credentials in the database and environment.
+    from ...db.async_bridge import run_repo
+    # Empty fields mean unchanged; clearing is explicit through DELETE.
+    for key, value in data.items():
+        if key not in CREDENTIAL_KEYS or not value:
+            continue
+        setter = SettingsRepository.set if key == "OLLAMA_URL" else SettingsRepository.set_secret_setting
+        await run_repo(setter, key, value)
+        os.environ[key] = value
+        if hasattr(ti_module, key):
+            setattr(ti_module, key, value)
+    return {"status": "success"}
 
-    This endpoint updates the API credentials in the database and environment.
-    It returns a success message if the credentials are updated successfully.
 
-    Args:
-        data (Dict[str, str]): A dictionary containing the API credentials to update.
-
-    Returns:
-        dict: A dictionary containing the status and message of the update operation.
-
-    Raises:
-        HTTPException: If an error occurs while updating the API credentials.
-    """
-    try:
-        for key, value in data.items():
-            if key not in CREDENTIAL_KEYS:
-                continue
-            if key == "OLLAMA_URL":
-                SettingsRepository.set(key, value)
-            else:
-                # Secret helpers not implemented yet; keep env fallback
-                SettingsRepository.set(key, value)
-            os.environ[key] = value
-            if hasattr(ti_module, key):
-                setattr(ti_module, key, value)
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+@router.delete("/credentials/{key}", response_model=StatusMessageResponse)
+async def delete_credential(key: str):
+    from ...db.async_bridge import run_repo
+    if key not in CREDENTIAL_KEYS:
+        raise HTTPException(status_code=404, detail="Unknown credential")
+    await run_repo(SettingsRepository.delete, key)
+    os.environ.pop(key, None)
+    if hasattr(ti_module, key):
+        setattr(ti_module, key, "")
+    return {"status": "success"}
