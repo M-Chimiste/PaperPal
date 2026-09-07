@@ -1,6 +1,9 @@
 # Core ML & Deep Learning
 torch
-transformers
+# Transformers 5.9+ regressed RT-DETR-v2 on Apple MPS by allocating float64
+# tensors on-device. Docling's layout model uses this path, so retain the last
+# MPS-compatible implementation until the upstream fix is released.
+transformers==5.8.1
 # numpy capped at 2.2.x: numba (via umap-learn, star map) rejects numpy>=2.3.
 # scipy>=1.16 needed on macOS 27+ (older wheels fail dyld __thread_bss checks).
 numpy>=2.0,<2.3
