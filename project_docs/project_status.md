@@ -1,10 +1,71 @@
 # Theseus Insight Project Status
 
-## Last Updated: June 10, 2026
+## Last Updated: July 31, 2026
 
 ---
 
 ## Recent Changes
+
+### Restore Docling layout inference on Apple MPS (2026-07-31)
+
+**Implemented:**
+- Pinned `transformers==5.8.1` in `requirements.txt`. Transformers 5.9 and
+  newer changed the RT-DETR-v2 positional-embedding implementation to allocate
+  `float64` tensors on the target device, which crashes on Apple MPS. Version
+  5.8.1 uses the requested input dtype and remains compatible with the current
+  Docling, sentence-transformers, and PyTorch requirements.
+- Downgraded the recovered local `venv/` from Transformers 5.14.1 to 5.8.1.
+  This restores the MPS path; no CPU fallback is enabled.
+
+**Verification and debug log:**
+- `uv pip check --python ./venv/bin/python`: all 237 installed packages are
+  compatible.
+- Direct RT-DETR-v2 MPS smoke test produced a finite float32 positional
+  embedding on `mps:0` with shape `(1, 80, 256)`.
+- End-to-end Docling conversion of a disposable one-page PDF, with
+  `AcceleratorDevice.MPS` explicitly selected, completed with
+  `ConversionStatus.SUCCESS`, one page, and zero errors.
+- The backend test suite could not start in the restricted test shell because
+  its PostgreSQL fixture at `localhost:5434` was not reachable there. This
+  occurred during test setup before any tests ran and is unrelated to the
+  Transformers change.
+
+**Next:**
+- Restart the running backend so it imports Transformers 5.8.1, then retry the
+  original newsletter/PDF job.
+- Revisit the pin after the upstream RT-DETR-v2 MPS fix is merged and included
+  in a Transformers release.
+
+### Local launch helper (2026-07-25)
+
+- Added root-level `start.sh` to launch Uvicorn from the repository directory
+  with the recovered `venv/` and `.env`, bound to `127.0.0.1:8000`.
+- The script uses `exec` so signals such as Ctrl+C reach Uvicorn directly and
+  trigger its normal worker, scheduler, and database-pool cleanup.
+
+### Fresh macOS recovery from verified PostgreSQL snapshot (2026-07-25)
+
+- Verified every file in `TheseusInsight-db-snapshot-20260725T121753Z/` against
+  `SHA256SUMS`; all checks passed.
+- Verified the separately restored `.env` file and `APP_SECRET_KEY` against the
+  snapshot fingerprints without exposing their values; both matched exactly.
+- Recreated the archived `theseus` PostgreSQL role and restored `theseusdb` into
+  the fresh local PostgreSQL 18.4 cluster with `pg_restore --create
+  --exit-on-error --jobs=4`.
+- Confirmed all 41 base tables restored, including 277,493 papers. PostgreSQL
+  loaded `pg_trgm` 1.6 and upgraded the restored pgvector extension from 0.8.0
+  to the locally installed compatible version, 0.8.5.
+- Used `uv` to install managed CPython 3.11.15 and create the repository-local
+  `venv/`; installed all 237 backend dependencies from `requirements.txt`.
+- Installed 624 frontend packages with `npm ci` and completed a clean
+  TypeScript/Vite production build.
+- Recreated the ignored runtime directories under `data/`.
+- Started the backend with `.env` loaded before module import. Startup skipped
+  all 17 already-applied migrations, verified all critical tables and the
+  `paper_profile_scores` unique constraint, and started the task workers and
+  scheduler successfully.
+- End-to-end checks passed: `/`, `/openapi.json`, `/api/profiles`, and a
+  paginated `/api/papers` request all returned HTTP 200.
 
 ### Codegen-drift fix: `auto_tune_batch_size` wired end-to-end (2026-06-10, session 8)
 
@@ -313,14 +374,16 @@ commit gated on a green characterization suite.
 ## What Needs to Be Implemented Next
 
 ### Short Term
-1. **Star Map quality**: Replace deterministic random projection with a higher-quality dimensionality reduction (e.g. UMAP) with caching + versioning.
-2. **Star Map semantics**: Add cluster labeling + selection actions (open Papers with filters, export selection, seed Mind-Map).
-3. **Dashboard iteration**: Add “Continue where I left off” cards (active jobs/tasks) and/or user-configurable widget visibility.
-4. **Newsletter observability**: Surface a clear UI message when ranking is reusing historical scores so “no LM Studio traffic” is expected and visible.
-5. **Newsletter task tracing**: Add a backend log/event for worker launch success/failure tied to each newsletter task ID for easier debugging.
-6. **UI Update**: Add toggle in Settings/Database import UI to control `merge_interests` behavior
-7. **Import Preview**: Show user what interests will be merged before confirming import
-8. **Logging**: Add more detailed logging about profile/interest merge decisions
+1. **Local media prerequisite**: Install `ffmpeg` before exercising podcast/audio/video generation; the recovered core app works, but pydub currently warns that no `ffmpeg` or `avconv` executable is on `PATH`.
+2. **Frontend dependency audit**: Review the 24 advisories reported by `npm ci` (1 low, 6 moderate, 17 high) and update dependencies deliberately rather than running an uncontrolled lockfile rewrite during recovery.
+3. **Star Map quality**: Replace deterministic random projection with a higher-quality dimensionality reduction (e.g. UMAP) with caching + versioning.
+4. **Star Map semantics**: Add cluster labeling + selection actions (open Papers with filters, export selection, seed Mind-Map).
+5. **Dashboard iteration**: Add “Continue where I left off” cards (active jobs/tasks) and/or user-configurable widget visibility.
+6. **Newsletter observability**: Surface a clear UI message when ranking is reusing historical scores so “no LM Studio traffic” is expected and visible.
+7. **Newsletter task tracing**: Add a backend log/event for worker launch success/failure tied to each newsletter task ID for easier debugging.
+8. **UI Update**: Add toggle in Settings/Database import UI to control `merge_interests` behavior
+9. **Import Preview**: Show user what interests will be merged before confirming import
+10. **Logging**: Add more detailed logging about profile/interest merge decisions
 
 ### Medium Term
 1. **Interest Similarity Detection**: Use embeddings to detect semantically similar interests (not just exact text match)
@@ -330,6 +393,47 @@ commit gated on a green characterization suite.
 ---
 
 ## Debug Log
+
+### 2026-07-25: Local launch script
+- Gracefully stopped the recovery-validation Uvicorn process and confirmed its
+  task workers, scheduler, WebSocket manager, and database pools shut down.
+- Added and shell-syntax-checked `start.sh`; it resolves its own directory
+  before launching, so it also works when invoked from outside the repository.
+
+### 2026-07-25: Fresh OS database and application recovery
+- Found a fresh Homebrew PostgreSQL 18.4 cluster running on the local Unix socket
+  and TCP port 5432. The `theseus` role and `theseusdb` database were absent, so
+  there was no pre-existing target data to overwrite.
+- Confirmed Homebrew pgvector 0.8.5 supports PostgreSQL 18 and was available to
+  the server. The snapshot originated on PostgreSQL 14.18 with pgvector 0.8.0.
+- Verified the complete directory-format archive before restore; every entry in
+  `SHA256SUMS` returned `OK`.
+- Recreated the role from `theseus-role.sql`, preserving its archived password
+  hash, then restored the database with four parallel jobs. `pg_restore`
+  completed with exit code 0 and no active restore sessions remained.
+- Post-restore database checks found 41 public base tables, 277,493 rows in
+  `papers`, and extensions `pg_trgm:1.6`, `plpgsql:1.0`, and `vector:0.8.5`.
+- The restored `.env` and `APP_SECRET_KEY` fingerprints matched the values
+  recorded before the OS reinstall, preserving access to encrypted settings in
+  the database.
+- Apple Command Line Tools supplied only Python 3.9.6, below the repository's
+  declared Python 3.10+ requirement. Used `uv 0.11.32` to download CPython
+  3.11.15 and build `venv/`, matching the Dockerfile's Python 3.11 runtime.
+- `uv pip install -r requirements.txt` resolved and installed 237 packages,
+  including the Git-based LLMFactory dependency and a locally built
+  `llama-cpp-python`.
+- `npm ci` installed 624 packages. npm reported 24 existing dependency
+  advisories and noted deferred install-script approvals for `esbuild` and
+  `fsevents`; the subsequent production build nevertheless completed
+  successfully (13,752 modules transformed).
+- Backend startup initially spent about one minute importing the ML stack, then
+  completed normally. Migration verification reported 0 applied, 17 skipped,
+  all critical tables present, and the required profile-score constraint intact.
+- pydub emitted the only runtime warning: `ffmpeg`/`avconv` is not installed.
+  Core API and frontend serving are unaffected; media generation remains to be
+  validated after adding `ffmpeg`.
+- HTTP smoke tests returned 200 for the built React frontend, OpenAPI document,
+  restored profile data, and restored paper data.
 
 ### 2026-03-13: Newsletter LM Studio investigation
 - Confirmed live DB orchestration still points the newsletter judge at LM Studio (`ibm/granite-4-h-tiny`).
